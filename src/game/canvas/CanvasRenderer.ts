@@ -93,8 +93,20 @@ export class CanvasRenderer {
     this.ctx.arc(x, y, radius, 0, Math.PI * 2)
     this.ctx.fill()
 
+    this.ctx.strokeStyle = '#FFAA00'
+    this.ctx.lineWidth = 1
+    this.ctx.beginPath()
+    this.ctx.arc(x, y, radius, 0, Math.PI * 2)
+    this.ctx.stroke()
+
     this.ctx.shadowColor = GAME_COLORS.projectile
-    this.ctx.shadowBlur = 10
+    this.ctx.shadowBlur = 8
+  }
+
+  public renderProjectiles(projectiles: Projectile[]) {
+    for (const projectile of projectiles) {
+      this.renderProjectile(projectile)
+    }
   }
 
   public renderJoystick() {

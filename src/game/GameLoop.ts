@@ -4,15 +4,22 @@ import { usePlayerStore } from '../store/playerStore'
 import { useEnemyStore } from '../store/enemyStore'
 import { GAME_CONFIG } from '../config/gameConfig'
 import { Player } from '../types'
+import { EnemySpawner } from './EnemySpawner'
+import { AutoAttack } from './AutoAttack'
+import { CollisionDetection } from './CollisionDetection'
 
 export class GameLoop {
   private renderer: CanvasRenderer
   private lastTime: number = 0
   private gameLoopId: number | null = null
   private isRunning: boolean = false
+  private enemySpawner: EnemySpawner
+  private autoAttack: AutoAttack
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new CanvasRenderer(canvas)
+    this.enemySpawner = new EnemySpawner()
+    this.autoAttack = new AutoAttack()
     this.setupEventListeners()
   }
 
@@ -50,6 +57,7 @@ export class GameLoop {
   private update(deltaTime: number) {
     const gameStore = useGameStore()
     const playerStore = usePlayerStore()
+    const enemyStore = useEnemyStore()
 
     if (gameStore.currentScene !== 'playing') {
       return
@@ -57,6 +65,12 @@ export class GameLoop {
 
     gameStore.setGameTime(gameStore.gameTime + deltaTime)
 
+    this.updatePlayerMovement(playerStore, deltaTime)
+    this.updateEnemies(enemyStore, playerStore, gameStore, deltaTime)
+    this.updateCombat(enemyStore, playerStore, gameStore)
+  }
+
+  private updatePlayerMovement(playerStore: any, deltaTime: number) {
     const joystickInput = this.renderer.getJoystickInput()
     const movementVector = joystickInput.getMovementVector()
 
@@ -76,6 +90,91 @@ export class GameLoop {
     }
 
     this.updatePlayerPosition(playerStore.player, deltaTime)
+  }
+
+  private updateEnemies(
+    enemyStore: any,
+    playerStore: any,
+    _gameStore: any,
+    deltaTime: number
+  ) {
+    const player = playerStore.player
+    const enemies = [...enemyStore.enemies]
+
+    this.enemySpawner.update(deltaTime)
+
+    if (this.enemySpawner.shouldSpawn()) {
+      const newEnemies = this.enemySpawner.spawn(player.x, player.y)
+      newEnemies.forEach((enemy) => {
+        enemyStore.addEnemy(enemy)
+        enemies.push(enemy)
+      })
+    }
+
+    for (const enemy of enemies) {
+      const dx = player.x - enemy.x
+      const dy = player.y - enemy.y
+      const distance = Math.hypot(dx, dy)
+
+      if (distance > 0) {
+        enemy.velocity.x = (dx / distance) * enemy.moveSpeed
+        enemy.velocity.y = (dy / distance) * enemy.moveSpeed
+      }
+
+      enemy.x += enemy.velocity.x * deltaTime
+      enemy.y += enemy.velocity.y * deltaTime
+    }
+
+    const canvasSize = this.renderer.getCanvasSize()
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i]
+      if (enemy.x < -100 || enemy.x > canvasSize.width + 100 ||
+          enemy.y < -100 || enemy.y > canvasSize.height + 100) {
+        enemyStore.removeEnemyById(enemy.id)
+        enemies.splice(i, 1)
+      }
+    }
+
+    enemyStore.updateEnemies(enemies)
+  }
+
+  private updateCombat(
+    enemyStore: any,
+    playerStore: any,
+    gameStore: any
+  ) {
+    const player = playerStore.player
+    const enemies = enemyStore.enemies
+    const deltaTime = GAME_CONFIG.gameplay.deltaTimeMax
+
+    const projectiles = this.autoAttack.update(deltaTime, player, enemies)
+
+    const collisions = this.autoAttack.checkCollisions(enemies)
+
+    const sortedCollisions = collisions.sort((a, b) => b.projectileIndex - a.projectileIndex)
+
+    for (const { projectileIndex, enemyIndex } of sortedCollisions) {
+      if (enemyIndex < enemies.length && projectileIndex < projectiles.length) {
+        const projectile = projectiles[projectileIndex]
+        const enemy = enemies[enemyIndex]
+
+        enemy.hp -= projectile.damage
+        gameStore.addDamage(projectile.damage)
+
+        this.autoAttack.removeProjectileAt(projectileIndex)
+
+        if (enemy.hp <= 0) {
+          enemyStore.removeEnemyById(enemy.id)
+          gameStore.addKill()
+          enemies.splice(enemyIndex, 1)
+        }
+      }
+    }
+
+    const collidingEnemy = CollisionDetection.checkPlayerEnemyCollision(player, enemies)
+    if (collidingEnemy) {
+      playerStore.setPlayerHP(player.hp - collidingEnemy.attackPower * 0.016)
+    }
   }
 
   private updatePlayerPosition(player: Player, deltaTime: number) {
@@ -103,6 +202,7 @@ export class GameLoop {
     if (gameStore.currentScene === 'playing') {
       this.renderer.renderPlayer(playerStore.player)
       this.renderer.renderEnemies(enemyStore.enemies)
+      this.renderer.renderProjectiles(this.autoAttack.getProjectiles())
 
       const { hp, maxHp, level, exp, maxExp } = playerStore.player
 

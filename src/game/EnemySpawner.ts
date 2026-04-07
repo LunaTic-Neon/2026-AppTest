@@ -1,0 +1,113 @@
+import { Enemy } from '../types'
+import { GAME_CONFIG } from '../config/gameConfig'
+
+export class EnemySpawner {
+  private spawnRate: number = 2
+  private timeSinceLastSpawn: number = 0
+  private waveSize: number = 1
+  private waveTimer: number = 0
+  private gameTime: number = 0
+
+  update(deltaTime: number): void {
+    this.gameTime += deltaTime
+    this.timeSinceLastSpawn += deltaTime
+    this.waveTimer += deltaTime
+
+    this.updateDifficulty()
+  }
+
+  private updateDifficulty(): void {
+    const timeInSeconds = Math.floor(this.gameTime)
+
+    if (timeInSeconds > 0 && timeInSeconds % 20 === 0) {
+      this.spawnRate = Math.min(this.spawnRate + 0.5, 8)
+    }
+
+    if (timeInSeconds > 0 && timeInSeconds % 30 === 0) {
+      this.waveSize = Math.min(this.waveSize + 1, 5)
+      this.waveTimer = 0
+    }
+  }
+
+  shouldSpawn(): boolean {
+    return this.timeSinceLastSpawn >= 1 / this.spawnRate
+  }
+
+  spawn(playerX: number, playerY: number): Enemy[] {
+    this.timeSinceLastSpawn = 0
+    const enemies: Enemy[] = []
+
+    const spawnCount = this.waveTimer < 2 ? this.waveSize : 1
+
+    for (let i = 0; i < spawnCount; i++) {
+      enemies.push(this.createEnemy(playerX, playerY))
+    }
+
+    return enemies
+  }
+
+  private createEnemy(playerX: number, playerY: number): Enemy {
+    const angle = Math.random() * Math.PI * 2
+    const distance = 600 + Math.random() * 200
+
+    const x = playerX + Math.cos(angle) * distance
+    const y = playerY + Math.sin(angle) * distance
+
+    const type = this.getRandomEnemyType()
+    const stats = this.getEnemyStats(type)
+
+    return {
+      id: `enemy_${Date.now()}_${Math.random()}`,
+      x,
+      y,
+      velocity: { x: 0, y: 0 },
+      radius: GAME_CONFIG.enemy.basicRadius,
+      hp: stats.hp,
+      maxHp: stats.hp,
+      attackPower: stats.attackPower,
+      moveSpeed: stats.moveSpeed,
+      type,
+    }
+  }
+
+  private getRandomEnemyType(): 'basic' | 'fast' | 'tank' {
+    const rand = Math.random()
+    if (rand < 0.7) return 'basic'
+    if (rand < 0.85) return 'fast'
+    return 'tank'
+  }
+
+  private getEnemyStats(type: 'basic' | 'fast' | 'tank') {
+    const difficultyMultiplier = 1 + this.gameTime / 60
+    const base = GAME_CONFIG.enemy
+
+    switch (type) {
+      case 'fast':
+        return {
+          hp: base.basicHp * 0.7 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 0.8 * difficultyMultiplier,
+          moveSpeed: base.basicMoveSpeed * 1.5,
+        }
+      case 'tank':
+        return {
+          hp: base.basicHp * 1.5 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 1.2 * difficultyMultiplier,
+          moveSpeed: base.basicMoveSpeed * 0.8,
+        }
+      default:
+        return {
+          hp: base.basicHp * difficultyMultiplier,
+          attackPower: base.basicAttackPower * difficultyMultiplier,
+          moveSpeed: base.basicMoveSpeed,
+        }
+    }
+  }
+
+  reset(): void {
+    this.spawnRate = 2
+    this.timeSinceLastSpawn = 0
+    this.waveSize = 1
+    this.waveTimer = 0
+    this.gameTime = 0
+  }
+}
