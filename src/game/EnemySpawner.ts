@@ -103,6 +103,10 @@ export class EnemySpawner {
     }
   }
 
+  getCurrentSpawnRate(): number {
+    return this.spawnRate
+  }
+
   reset(): void {
     this.spawnRate = 2
     this.timeSinceLastSpawn = 0

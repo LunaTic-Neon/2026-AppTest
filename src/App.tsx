@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { GameLoop } from './game/GameLoop'
 import { useGameStore } from './store/gameStore'
 import { usePlayerStore } from './store/playerStore'
+import LevelUpScreen from './components/LevelUpScreen'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -31,6 +32,9 @@ function App() {
         className="block w-full h-full"
         style={{ display: 'block', margin: 0, padding: 0 }}
       />
+      {gameStore.currentScene === 'levelUp' && (
+        <LevelUpScreen />
+      )}
     </div>
   )
 }

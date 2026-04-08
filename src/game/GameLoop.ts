@@ -7,6 +7,7 @@ import { Player } from '../types'
 import { EnemySpawner } from './EnemySpawner'
 import { AutoAttack } from './AutoAttack'
 import { CollisionDetection } from './CollisionDetection'
+import { DebugSystem } from './DebugSystem'
 
 export class GameLoop {
   private renderer: CanvasRenderer
@@ -15,11 +16,14 @@ export class GameLoop {
   private isRunning: boolean = false
   private enemySpawner: EnemySpawner
   private autoAttack: AutoAttack
+  private debugSystem: DebugSystem
+  private lastPlayerLevel: number = 1
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new CanvasRenderer(canvas)
     this.enemySpawner = new EnemySpawner()
     this.autoAttack = new AutoAttack()
+    this.debugSystem = new DebugSystem()
     this.setupEventListeners()
   }
 
@@ -68,6 +72,15 @@ export class GameLoop {
     this.updatePlayerMovement(playerStore, deltaTime)
     this.updateEnemies(enemyStore, playerStore, gameStore, deltaTime)
     this.updateCombat(enemyStore, playerStore, gameStore)
+    this.checkLevelUp(playerStore, gameStore)
+  }
+
+  private checkLevelUp(playerStore: any, gameStore: any) {
+    const currentLevel = playerStore.player.level
+    if (currentLevel > this.lastPlayerLevel) {
+      this.lastPlayerLevel = currentLevel
+      gameStore.setCurrentScene('levelUp')
+    }
   }
 
   private updatePlayerMovement(playerStore: any, deltaTime: number) {
@@ -204,7 +217,7 @@ export class GameLoop {
       this.renderer.renderEnemies(enemyStore.enemies)
       this.renderer.renderProjectiles(this.autoAttack.getProjectiles())
 
-      const { hp, maxHp, level, exp, maxExp } = playerStore.player
+      const { hp, maxHp, level, exp, maxExp, x, y } = playerStore.player
 
       this.renderer.renderHUD(
         gameStore.gameTime,
@@ -215,6 +228,22 @@ export class GameLoop {
         exp,
         maxExp
       )
+
+      this.debugSystem.update(
+        enemyStore.enemies.length,
+        this.autoAttack.getProjectiles().length,
+        x,
+        y,
+        hp,
+        maxHp,
+        level,
+        gameStore.gameTime,
+        gameStore.killCount,
+        gameStore.totalDamageDealt,
+        this.enemySpawner.getCurrentSpawnRate()
+      )
+
+      this.renderer.renderDebugPanel(this.debugSystem.getStats())
     }
 
     this.renderer.renderJoystick()

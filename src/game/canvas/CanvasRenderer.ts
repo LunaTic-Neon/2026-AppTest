@@ -2,17 +2,28 @@ import { Player, Enemy, Projectile } from '../../types'
 import { GAME_CONFIG, JOYSTICK_CONFIG } from '../../config/gameConfig'
 import { GAME_COLORS } from '../../config/constants'
 import { JoystickInput } from '../input/JoystickInput'
+import { DebugStats } from '../DebugSystem'
 
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private joystickInput: JoystickInput
+  private showDebug: boolean = true
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')!
     this.setupCanvas()
     this.joystickInput = new JoystickInput(canvas)
+    this.setupDebugToggle()
+  }
+
+  private setupDebugToggle() {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'd' || e.key === 'D') {
+        this.showDebug = !this.showDebug
+      }
+    })
   }
 
   private setupCanvas() {
@@ -189,6 +200,53 @@ export class CanvasRenderer {
     this.canvas.width = GAME_CONFIG.canvas.width * dpr
     this.canvas.height = GAME_CONFIG.canvas.height * dpr
     this.ctx.scale(dpr, dpr)
+  }
+
+  public renderDebugPanel(stats: DebugStats) {
+    if (!this.showDebug) return
+
+    const panelX = 20
+    const panelY = 20
+    const lineHeight = 20
+    const padding = 10
+
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+    this.ctx.fillRect(panelX - padding, panelY - padding, 280, 220)
+
+    this.ctx.strokeStyle = 'rgba(0, 217, 255, 0.5)'
+    this.ctx.lineWidth = 2
+    this.ctx.strokeRect(panelX - padding, panelY - padding, 280, 220)
+
+    this.ctx.font = '12px monospace'
+    this.ctx.fillStyle = '#00D9FF'
+
+    const lines = [
+      `FPS: ${stats.fps}`,
+      `게임시간: ${Math.floor(stats.gameTime)}초`,
+      `처치: ${stats.killCount}`,
+      `레벨: ${stats.playerLevel}`,
+      ``,
+      `적: ${stats.totalEnemies}`,
+      `투사체: ${stats.totalProjectiles}`,
+      ``,
+      `플레이어 X: ${Math.round(stats.playerX)}`,
+      `플레이어 Y: ${Math.round(stats.playerY)}`,
+      `체력: ${Math.round(stats.playerHP)} / ${Math.round(stats.playerMaxHP)}`,
+      ``,
+      `총 데미지: ${Math.round(stats.totalDamage)}`,
+    ]
+
+    lines.forEach((line, index) => {
+      this.ctx.fillText(line, panelX, panelY + lineHeight * (index + 1))
+    })
+
+    this.ctx.font = '11px monospace'
+    this.ctx.fillStyle = '#00AA88'
+    this.ctx.fillText('[D] 디버그 토글', panelX, panelY + lineHeight * (lines.length + 2))
+  }
+
+  public isDebugVisible(): boolean {
+    return this.showDebug
   }
 
   public destroy() {
