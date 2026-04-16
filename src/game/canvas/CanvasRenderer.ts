@@ -2,12 +2,16 @@ import { Player, Enemy, Projectile } from '../../types'
 import { GAME_CONFIG, JOYSTICK_CONFIG } from '../../config/gameConfig'
 import { GAME_COLORS } from '../../config/constants'
 import { JoystickInput } from '../input/JoystickInput'
+import { KeyboardInput } from '../input/KeyboardInput'
+import { MouseInput } from '../input/MouseInput'
 import { DebugStats } from '../DebugSystem'
 
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private joystickInput: JoystickInput
+  private keyboardInput: KeyboardInput
+  private mouseInput: MouseInput
   private showDebug: boolean = true
 
   constructor(canvas: HTMLCanvasElement) {
@@ -15,7 +19,11 @@ export class CanvasRenderer {
     this.ctx = canvas.getContext('2d')!
     this.setupCanvas()
     this.joystickInput = new JoystickInput(canvas)
+    this.keyboardInput = new KeyboardInput()
+    this.mouseInput = new MouseInput(canvas)
     this.setupDebugToggle()
+    // 우클릭 메뉴 비활성화 (게임용)
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault())
   }
 
   private setupDebugToggle() {
@@ -44,9 +52,42 @@ export class CanvasRenderer {
     return this.joystickInput
   }
 
-  public clear() {
+  public getKeyboardInput(): KeyboardInput {
+    return this.keyboardInput
+  }
+
+  public getMouseInput(): MouseInput {
+    return this.mouseInput
+  }
+
+  public clear(playerX: number = 0, playerY: number = 0) {
+    // 배경 채우기
     this.ctx.fillStyle = GAME_COLORS.background
     this.ctx.fillRect(0, 0, GAME_CONFIG.canvas.width, GAME_CONFIG.canvas.height)
+
+    // 격자 배경 그리기 (플레이어 위치에 따라 스크롤)
+    const gridSize = 80
+    const offsetX = playerX % gridSize
+    const offsetY = playerY % gridSize
+
+    this.ctx.strokeStyle = 'rgba(0, 217, 255, 0.1)'
+    this.ctx.lineWidth = 1
+
+    // 수평선
+    for (let i = -gridSize; i < GAME_CONFIG.canvas.height + gridSize; i += gridSize) {
+      this.ctx.beginPath()
+      this.ctx.moveTo(0, i - offsetY)
+      this.ctx.lineTo(GAME_CONFIG.canvas.width, i - offsetY)
+      this.ctx.stroke()
+    }
+
+    // 수직선
+    for (let i = -gridSize; i < GAME_CONFIG.canvas.width + gridSize; i += gridSize) {
+      this.ctx.beginPath()
+      this.ctx.moveTo(i - offsetX, 0)
+      this.ctx.lineTo(i - offsetX, GAME_CONFIG.canvas.height)
+      this.ctx.stroke()
+    }
   }
 
   public renderPlayer(player: Player) {
@@ -76,18 +117,47 @@ export class CanvasRenderer {
   }
 
   public renderEnemy(enemy: Enemy) {
-    const { x, y, radius } = enemy
+    const { x, y, radius, type } = enemy
 
-    this.ctx.fillStyle = GAME_COLORS.enemy
-    this.ctx.beginPath()
-    this.ctx.arc(x, y, radius, 0, Math.PI * 2)
-    this.ctx.fill()
+    switch (type) {
+      case 'fast': {
+        const size = radius * 2
+        this.ctx.fillStyle = '#FFAA00'
+        this.ctx.beginPath()
+        this.ctx.moveTo(x, y - size)
+        this.ctx.lineTo(x - size, y + size)
+        this.ctx.lineTo(x + size, y + size)
+        this.ctx.closePath()
+        this.ctx.fill()
 
-    this.ctx.strokeStyle = '#FF0000'
-    this.ctx.lineWidth = 2
-    this.ctx.beginPath()
-    this.ctx.arc(x, y, radius, 0, Math.PI * 2)
-    this.ctx.stroke()
+        this.ctx.strokeStyle = '#FFFFFF'
+        this.ctx.lineWidth = 2
+        this.ctx.stroke()
+        break
+      }
+      case 'tank': {
+        const size = radius * 2
+        this.ctx.fillStyle = '#8B0000'
+        this.ctx.fillRect(x - size, y - size, size * 2, size * 2)
+
+        this.ctx.strokeStyle = '#FFD700'
+        this.ctx.lineWidth = 3
+        this.ctx.strokeRect(x - size, y - size, size * 2, size * 2)
+        break
+      }
+      default: {
+        this.ctx.fillStyle = GAME_COLORS.enemy
+        this.ctx.beginPath()
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2)
+        this.ctx.fill()
+
+        this.ctx.strokeStyle = '#FF0000'
+        this.ctx.lineWidth = 2
+        this.ctx.beginPath()
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2)
+        this.ctx.stroke()
+      }
+    }
   }
 
   public renderEnemies(enemies: Enemy[]) {
@@ -118,6 +188,28 @@ export class CanvasRenderer {
     for (const projectile of projectiles) {
       this.renderProjectile(projectile)
     }
+  }
+
+  public renderAimCursor(x: number, y: number, active: boolean) {
+    if (!active) return
+
+    const size = 18
+    this.ctx.save()
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
+    this.ctx.lineWidth = 2
+
+    this.ctx.beginPath()
+    this.ctx.arc(x, y, size, 0, Math.PI * 2)
+    this.ctx.stroke()
+
+    this.ctx.beginPath()
+    this.ctx.moveTo(x - size * 0.7, y)
+    this.ctx.lineTo(x + size * 0.7, y)
+    this.ctx.moveTo(x, y - size * 0.7)
+    this.ctx.lineTo(x, y + size * 0.7)
+    this.ctx.stroke()
+
+    this.ctx.restore()
   }
 
   public renderJoystick() {
@@ -158,41 +250,87 @@ export class CanvasRenderer {
   }
 
   public renderHUD(gameTime: number, killCount: number, playerHP: number, maxHP: number, playerLevel: number, playerExp: number, maxExp: number) {
-    this.ctx.font = 'bold 24px Arial'
+    const canvasWidth = GAME_CONFIG.canvas.width
+    const canvasHeight = GAME_CONFIG.canvas.height
+    
+    // 우측 상단 정보 패널 (생존시간, 처치, 레벨만)
+    const panelX = canvasWidth - 280
+    const panelY = 20
+    const panelWidth = 260
+    const panelHeight = 120
+    const padding = 15
+
+    // 반투명 배경
+    this.ctx.fillStyle = 'rgba(10, 10, 30, 0.8)'
+    this.ctx.fillRect(panelX, panelY, panelWidth, panelHeight)
+
+    // 테두리
+    this.ctx.strokeStyle = GAME_COLORS.ui
+    this.ctx.lineWidth = 2
+    this.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight)
+
+    // 텍스트
+    this.ctx.font = 'bold 20px Arial'
     this.ctx.fillStyle = GAME_COLORS.ui
     this.ctx.textAlign = 'left'
 
-    this.ctx.fillText(`생존시간: ${Math.floor(gameTime)}초`, 20, 40)
-    this.ctx.fillText(`처치: ${killCount}`, 20, 70)
-    this.ctx.fillText(`레벨: ${playerLevel}`, 20, 100)
+    let currentY = panelY + padding + 20
 
-    const hpBarWidth = 200
-    const hpBarHeight = 20
+    // 시간을 절댓값으로 표시 (음수 방지)
+    const displayTime = Math.max(0, Math.floor(gameTime))
+    this.ctx.fillText(`⏱ ${displayTime}s`, panelX + padding, currentY)
+    currentY += 30
+
+    this.ctx.fillText(`💀 ${killCount}`, panelX + padding, currentY)
+    currentY += 30
+
+    this.ctx.fillText(`⭐ ${playerLevel}`, panelX + padding, currentY)
+  }
+
+  public renderPlayerHealthBar(playerX: number, playerY: number, playerHP: number, maxHP: number) {
+    // 플레이어 바로 아래에 작은 체력바
+    const barWidth = 60
+    const barHeight = 8
     const hpPercent = playerHP / maxHP
 
+    // 배경
     this.ctx.fillStyle = '#333333'
-    this.ctx.fillRect(20, 130, hpBarWidth, hpBarHeight)
+    this.ctx.fillRect(playerX - barWidth / 2, playerY + 35, barWidth, barHeight)
 
+    // 체력
     this.ctx.fillStyle = playerHP > maxHP * 0.25 ? '#00FF00' : '#FF0000'
-    this.ctx.fillRect(20, 130, hpBarWidth * hpPercent, hpBarHeight)
+    this.ctx.fillRect(playerX - barWidth / 2, playerY + 35, barWidth * hpPercent, barHeight)
 
-    this.ctx.strokeStyle = GAME_COLORS.ui
-    this.ctx.lineWidth = 2
-    this.ctx.strokeRect(20, 130, hpBarWidth, hpBarHeight)
-
-    const expBarWidth = 200
-    const expBarHeight = 10
-    const expPercent = playerExp / maxExp
-
-    this.ctx.fillStyle = '#333333'
-    this.ctx.fillRect(20, 160, expBarWidth, expBarHeight)
-
-    this.ctx.fillStyle = '#FFD700'
-    this.ctx.fillRect(20, 160, expBarWidth * expPercent, expBarHeight)
-
+    // 테두리
     this.ctx.strokeStyle = GAME_COLORS.ui
     this.ctx.lineWidth = 1
-    this.ctx.strokeRect(20, 160, expBarWidth, expBarHeight)
+    this.ctx.strokeRect(playerX - barWidth / 2, playerY + 35, barWidth, barHeight)
+  }
+
+  public renderExperienceBar(playerExp: number, maxExp: number) {
+    // 화면 하단 경험치바 (작은 크기)
+    const canvasWidth = GAME_CONFIG.canvas.width
+    const canvasHeight = GAME_CONFIG.canvas.height
+    const padding = 20
+    const barHeight = 16
+    const barWidth = 400
+
+    const expBarX = (canvasWidth - barWidth) / 2
+    const expBarY = canvasHeight - padding - barHeight
+    const expPercent = playerExp / maxExp
+
+    // 배경
+    this.ctx.fillStyle = '#333333'
+    this.ctx.fillRect(expBarX, expBarY, barWidth, barHeight)
+
+    // 경험치
+    this.ctx.fillStyle = '#FFD700'
+    this.ctx.fillRect(expBarX, expBarY, barWidth * expPercent, barHeight)
+
+    // 테두리
+    this.ctx.strokeStyle = GAME_COLORS.ui
+    this.ctx.lineWidth = 1
+    this.ctx.strokeRect(expBarX, expBarY, barWidth, barHeight)
   }
 
   public resize() {

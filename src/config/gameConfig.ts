@@ -8,7 +8,7 @@ export const GAME_CONFIG = {
     initialHp: 100,
     initialAttackPower: 10,
     initialAttackSpeed: 1,
-    initialMoveSpeed: 200,
+    initialMoveSpeed: 400,
   },
   enemy: {
     basicRadius: 12,

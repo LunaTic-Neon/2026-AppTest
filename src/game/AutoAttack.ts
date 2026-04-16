@@ -14,14 +14,23 @@ export class AutoAttack {
   update(
     deltaTime: number,
     player: Player,
-    enemies: Enemy[]
+    enemies: Enemy[],
+    mouseX?: number,
+    mouseY?: number,
+    isMouseClicking?: boolean
   ): Projectile[] {
     this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime)
 
     const projectiles = this.projectileSystem.getProjectiles()
     this.projectileSystem.update(deltaTime, 1920, 1080)
 
-    if (this.attackCooldown <= 0 && enemies.length > 0) {
+    // 마우스 클릭으로 공격
+    if (isMouseClicking && mouseX !== undefined && mouseY !== undefined && this.attackCooldown <= 0) {
+      this.fireProjectileToMouse(player, mouseX, mouseY)
+      this.attackCooldown = 1 / player.attackSpeed
+    }
+    // 근처 적 자동 공격
+    else if (this.attackCooldown <= 0 && enemies.length > 0) {
       const target = CollisionDetection.getClosestEnemy(player, enemies, this.detectionRange)
 
       if (target) {
@@ -39,6 +48,17 @@ export class AutoAttack {
       player.y,
       target.x,
       target.y,
+      player.attackPower,
+      600
+    )
+  }
+
+  private fireProjectileToMouse(player: Player, mouseX: number, mouseY: number): void {
+    this.projectileSystem.createProjectile(
+      player.x,
+      player.y,
+      mouseX,
+      mouseY,
       player.attackPower,
       600
     )

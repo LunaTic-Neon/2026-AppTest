@@ -25,6 +25,12 @@ export class GameLoop {
     this.autoAttack = new AutoAttack()
     this.debugSystem = new DebugSystem()
     this.setupEventListeners()
+    this.enemySpawner.reset()
+  }
+
+  public reset() {
+    this.enemySpawner.reset()
+    this.autoAttack.reset()
   }
 
   private setupEventListeners() {
@@ -35,7 +41,7 @@ export class GameLoop {
     if (this.isRunning) return
 
     this.isRunning = true
-    this.lastTime = Date.now()
+    this.lastTime = performance.now()
 
     const gameLoop = (currentTime: number) => {
       const deltaTime = Math.min((currentTime - this.lastTime) / 1000, GAME_CONFIG.gameplay.deltaTimeMax)
@@ -59,15 +65,16 @@ export class GameLoop {
   }
 
   private update(deltaTime: number) {
-    const gameStore = useGameStore()
-    const playerStore = usePlayerStore()
-    const enemyStore = useEnemyStore()
+    const gameStore = useGameStore.getState()
+    const playerStore = usePlayerStore.getState()
+    const enemyStore = useEnemyStore.getState()
 
     if (gameStore.currentScene !== 'playing') {
       return
     }
 
-    gameStore.setGameTime(gameStore.gameTime + deltaTime)
+    const newGameTime = gameStore.gameTime + deltaTime
+    gameStore.setGameTime(newGameTime)
 
     this.updatePlayerMovement(playerStore, deltaTime)
     this.updateEnemies(enemyStore, playerStore, gameStore, deltaTime)
@@ -85,7 +92,14 @@ export class GameLoop {
 
   private updatePlayerMovement(playerStore: any, deltaTime: number) {
     const joystickInput = this.renderer.getJoystickInput()
-    const movementVector = joystickInput.getMovementVector()
+    const keyboardInput = this.renderer.getKeyboardInput()
+    
+    let movementVector = keyboardInput.getMovementVector()
+    
+    // 키보드 입력이 없으면 조이스틱 입력 사용
+    if (movementVector.x === 0 && movementVector.y === 0) {
+      movementVector = joystickInput.getMovementVector()
+    }
 
     const player = playerStore.player
     const moveSpeed = player.moveSpeed
@@ -119,7 +133,6 @@ export class GameLoop {
     if (this.enemySpawner.shouldSpawn()) {
       const newEnemies = this.enemySpawner.spawn(player.x, player.y)
       newEnemies.forEach((enemy) => {
-        enemyStore.addEnemy(enemy)
         enemies.push(enemy)
       })
     }
@@ -143,7 +156,6 @@ export class GameLoop {
       const enemy = enemies[i]
       if (enemy.x < -100 || enemy.x > canvasSize.width + 100 ||
           enemy.y < -100 || enemy.y > canvasSize.height + 100) {
-        enemyStore.removeEnemyById(enemy.id)
         enemies.splice(i, 1)
       }
     }
@@ -160,7 +172,19 @@ export class GameLoop {
     const enemies = enemyStore.enemies
     const deltaTime = GAME_CONFIG.gameplay.deltaTimeMax
 
-    const projectiles = this.autoAttack.update(deltaTime, player, enemies)
+    // 마우스 입력 가져오기
+    const mouseInput = this.renderer.getMouseInput()
+    const mousePos = mouseInput.getMousePosition()
+    const isMouseClicking = mouseInput.isMouseClicking()
+
+    const projectiles = this.autoAttack.update(
+      deltaTime,
+      player,
+      enemies,
+      mousePos.x,
+      mousePos.y,
+      isMouseClicking
+    )
 
     const collisions = this.autoAttack.checkCollisions(enemies)
 
@@ -179,6 +203,10 @@ export class GameLoop {
         if (enemy.hp <= 0) {
           enemyStore.removeEnemyById(enemy.id)
           gameStore.addKill()
+
+          const expGained = Math.max(10, Math.floor(enemy.maxHp / 2))
+          playerStore.addPlayerExp(expGained)
+
           enemies.splice(enemyIndex, 1)
         }
       }
@@ -191,7 +219,7 @@ export class GameLoop {
   }
 
   private updatePlayerPosition(player: Player, deltaTime: number) {
-    const playerStore = usePlayerStore()
+    const playerStore = usePlayerStore.getState()
     const canvasSize = this.renderer.getCanvasSize()
 
     let newX = player.x + player.velocity.x * deltaTime
@@ -206,16 +234,22 @@ export class GameLoop {
   }
 
   private render() {
-    const gameStore = useGameStore()
-    const playerStore = usePlayerStore()
-    const enemyStore = useEnemyStore()
+    const gameStore = useGameStore.getState()
+    const playerStore = usePlayerStore.getState()
+    const enemyStore = useEnemyStore.getState()
 
-    this.renderer.clear()
+    const { x, y } = playerStore.player
+    this.renderer.clear(x, y)
 
     if (gameStore.currentScene === 'playing') {
       this.renderer.renderPlayer(playerStore.player)
       this.renderer.renderEnemies(enemyStore.enemies)
       this.renderer.renderProjectiles(this.autoAttack.getProjectiles())
+
+      const mouseInput = this.renderer.getMouseInput()
+      const mousePos = mouseInput.getMousePosition()
+      const isMouseClicking = mouseInput.isMouseClicking()
+      this.renderer.renderAimCursor(mousePos.x, mousePos.y, isMouseClicking)
 
       const { hp, maxHp, level, exp, maxExp, x, y } = playerStore.player
 
@@ -229,21 +263,11 @@ export class GameLoop {
         maxExp
       )
 
-      this.debugSystem.update(
-        enemyStore.enemies.length,
-        this.autoAttack.getProjectiles().length,
-        x,
-        y,
-        hp,
-        maxHp,
-        level,
-        gameStore.gameTime,
-        gameStore.killCount,
-        gameStore.totalDamageDealt,
-        this.enemySpawner.getCurrentSpawnRate()
-      )
+      // 플레이어 위에 체력바
+      this.renderer.renderPlayerHealthBar(x, y, hp, maxHp)
 
-      this.renderer.renderDebugPanel(this.debugSystem.getStats())
+      // 하단에 경험치바
+      this.renderer.renderExperienceBar(exp, maxExp)
     }
 
     this.renderer.renderJoystick()

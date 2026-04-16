@@ -8,6 +8,6 @@ export const GAME_COLORS = {
   player: '#00D9FF',
   enemy: '#FF4444',
   projectile: '#FFD700',
-  background: '#0a0a0a',
+  background: '#1a1a2e',
   ui: '#00D9FF',
 } as const

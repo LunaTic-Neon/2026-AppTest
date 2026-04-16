@@ -54,9 +54,27 @@ export const usePlayerStore = create<PlayerState>((set) => ({
     })),
 
   addPlayerExp: (exp) =>
-    set((state) => ({
-      player: { ...state.player, exp: state.player.exp + exp },
-    })),
+    set((state) => {
+      const newExp = state.player.exp + exp
+      if (newExp >= state.player.maxExp) {
+        const remainingExp = newExp - state.player.maxExp
+        return {
+          player: {
+            ...state.player,
+            level: state.player.level + 1,
+            exp: remainingExp,
+            maxExp: state.player.maxExp * 1.15,
+          },
+        }
+      }
+
+      return {
+        player: {
+          ...state.player,
+          exp: newExp,
+        },
+      }
+    }),
 
   levelUp: () =>
     set((state) => ({

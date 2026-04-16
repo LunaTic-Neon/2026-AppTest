@@ -2,7 +2,7 @@ import { Enemy } from '../types'
 import { GAME_CONFIG } from '../config/gameConfig'
 
 export class EnemySpawner {
-  private spawnRate: number = 2
+  private spawnRate: number = 0.35
   private timeSinceLastSpawn: number = 0
   private waveSize: number = 1
   private waveTimer: number = 0
@@ -30,6 +30,9 @@ export class EnemySpawner {
   }
 
   shouldSpawn(): boolean {
+    if (this.timeSinceLastSpawn < 0) {
+      this.timeSinceLastSpawn = 0
+    }
     return this.timeSinceLastSpawn >= 1 / this.spawnRate
   }
 
@@ -48,7 +51,7 @@ export class EnemySpawner {
 
   private createEnemy(playerX: number, playerY: number): Enemy {
     const angle = Math.random() * Math.PI * 2
-    const distance = 600 + Math.random() * 200
+    const distance = 500 + Math.random() * 200
 
     const x = playerX + Math.cos(angle) * distance
     const y = playerY + Math.sin(angle) * distance
@@ -108,7 +111,7 @@ export class EnemySpawner {
   }
 
   reset(): void {
-    this.spawnRate = 2
+    this.spawnRate = 0.35
     this.timeSinceLastSpawn = 0
     this.waveSize = 1
     this.waveTimer = 0
