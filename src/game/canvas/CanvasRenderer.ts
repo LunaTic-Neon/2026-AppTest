@@ -157,13 +157,35 @@ export class CanvasRenderer {
         break
       }
       case 'tank': {
-        const size = radius * 2
-        this.ctx.fillStyle = '#8B0000'
-        this.ctx.fillRect(x - size, y - size, size * 2, size * 2)
+        // boss will be drawn as a hexagon if flagged
+        if ((enemy as any).isBoss) {
+          const size = radius * 2
+          const sides = 6
+          const angleOffset = -Math.PI / 2
+          this.ctx.fillStyle = '#8B0000'
+          this.ctx.beginPath()
+          for (let i = 0; i < sides; i++) {
+            const a = angleOffset + (i / sides) * Math.PI * 2
+            const vx = x + Math.cos(a) * size
+            const vy = y + Math.sin(a) * size
+            if (i === 0) this.ctx.moveTo(vx, vy)
+            else this.ctx.lineTo(vx, vy)
+          }
+          this.ctx.closePath()
+          this.ctx.fill()
 
-        this.ctx.strokeStyle = '#FFD700'
-        this.ctx.lineWidth = 3
-        this.ctx.strokeRect(x - size, y - size, size * 2, size * 2)
+          this.ctx.strokeStyle = '#FFD700'
+          this.ctx.lineWidth = 2
+          this.ctx.stroke()
+        } else {
+          const size = radius * 2
+          this.ctx.fillStyle = '#8B0000'
+          this.ctx.fillRect(x - size, y - size, size * 2, size * 2)
+
+          this.ctx.strokeStyle = '#FFD700'
+          this.ctx.lineWidth = 3
+          this.ctx.strokeRect(x - size, y - size, size * 2, size * 2)
+        }
         break
       }
       default: {
@@ -325,6 +347,27 @@ export class CanvasRenderer {
     this.ctx.strokeStyle = GAME_COLORS.ui
     this.ctx.lineWidth = 1
     this.ctx.strokeRect(playerX - barWidth / 2, playerY + 35, barWidth, barHeight)
+  }
+
+  public renderBossHealthBar(anchorX: number, anchorY: number, bossHP: number, bossMaxHP: number) {
+    // render a wider boss hp bar under player's health bar (anchorY expected to be playerY + offset)
+    const barWidth = 180
+    const barHeight = 10
+    const hpPercent = bossHP / bossMaxHP
+
+    const x = anchorX - barWidth / 2
+    const y = anchorY + 10
+
+    this.ctx.fillStyle = '#222222'
+    this.ctx.fillRect(x, y, barWidth, barHeight)
+
+    this.ctx.fillStyle = '#FF4444'
+    this.ctx.fillRect(x, y, barWidth * Math.max(0, Math.min(1, hpPercent)), barHeight)
+
+    // border
+    this.ctx.strokeStyle = GAME_COLORS.ui
+    this.ctx.lineWidth = 1
+    this.ctx.strokeRect(x, y, barWidth, barHeight)
   }
 
   public renderExperienceBar(playerExp: number, maxExp: number) {

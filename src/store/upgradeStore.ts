@@ -43,6 +43,13 @@ const DEFAULT_UPGRADES: Upgrade[] = [
     type: 'health',
     value: 0.25,
   },
+  {
+    id: 'weapon_multishot',
+    name: '탄막 강화',
+    description: '탄막이 +1발 증가합니다 (최대 5발)',
+    type: 'weapon',
+    value: 1,
+  },
 ]
 
 export const useUpgradeStore = create<UpgradeState>((set, get) => ({

@@ -43,25 +43,51 @@ export class AutoAttack {
   }
 
   private fireProjectile(player: Player, target: Enemy): void {
-    this.projectileSystem.createProjectile(
-      player.x,
-      player.y,
-      target.x,
-      target.y,
-      player.attackPower,
-      600
-    )
+    const count = Math.min(player.projectileCount || 1, 5)
+    const baseAngle = Math.atan2(target.y - player.y, target.x - player.x)
+    const spread = 0.25 // radians total spread
+
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0.5 : i / (count - 1)
+      const angle = baseAngle + (t - 0.5) * spread
+      const tx = player.x + Math.cos(angle) * 10
+      const ty = player.y + Math.sin(angle) * 10
+      const vx = Math.cos(angle) * 600
+      const vy = Math.sin(angle) * 600
+
+      this.projectileSystem.createProjectile(
+        tx,
+        ty,
+        tx + vx,
+        ty + vy,
+        player.attackPower,
+        600
+      )
+    }
   }
 
   private fireProjectileToMouse(player: Player, mouseX: number, mouseY: number): void {
-    this.projectileSystem.createProjectile(
-      player.x,
-      player.y,
-      mouseX,
-      mouseY,
-      player.attackPower,
-      600
-    )
+    const count = Math.min(player.projectileCount || 1, 5)
+    const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x)
+    const spread = 0.25
+
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0.5 : i / (count - 1)
+      const angle = baseAngle + (t - 0.5) * spread
+      const tx = player.x + Math.cos(angle) * 10
+      const ty = player.y + Math.sin(angle) * 10
+      const vx = Math.cos(angle) * 600
+      const vy = Math.sin(angle) * 600
+
+      this.projectileSystem.createProjectile(
+        tx,
+        ty,
+        tx + vx,
+        ty + vy,
+        player.attackPower,
+        600
+      )
+    }
   }
 
   checkCollisions(enemies: Enemy[]): Array<{ projectileIndex: number; enemyIndex: number }> {

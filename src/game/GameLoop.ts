@@ -183,7 +183,66 @@ export class GameLoop {
       })
     }
 
+    // spawn boss every 60 seconds
+    if (this.enemySpawner.shouldSpawnBoss()) {
+      const boss = this.enemySpawner.spawnBoss(player.x, player.y)
+      enemies.push(boss)
+    }
+    
     for (const enemy of enemies) {
+      // boss special behavior: hexagon charge + 6-way shooting
+      if ((enemy as any).id?.startsWith('boss_')) {
+        // set velocity towards player for charge
+        const dx = player.x - enemy.x
+        const dy = player.y - enemy.y
+        const dist = Math.hypot(dx, dy) || 1
+        // charge in short bursts
+        const chargeSpeed = (enemy as any).chargeSpeed || enemy.moveSpeed * 3
+        const chargeDuration = (enemy as any).chargeDuration || 1.2
+        ;(enemy as any).chargeTimer = ((enemy as any).chargeTimer || 0) + deltaTime
+        if ((enemy as any).chargeTimer <= chargeDuration) {
+          enemy.velocity.x = (dx / dist) * chargeSpeed
+          enemy.velocity.y = (dy / dist) * chargeSpeed
+        } else {
+          // slow down after charge
+          enemy.velocity.x *= 0.9
+          enemy.velocity.y *= 0.9
+          if ((enemy as any).chargeTimer > chargeDuration + 1.0) {
+            ;(enemy as any).chargeTimer = 0
+          }
+        }
+
+        // hexagonal orbiting movement (small) for visual
+        // small hex offset for visual (assign once per boss)
+        let hexOffset = (enemy as any).hexOffset as number | undefined
+        if (typeof hexOffset !== 'number') {
+          hexOffset = Math.random() * Math.PI * 2;
+          (enemy as any).hexOffset = hexOffset;
+        }
+        const t = this.enemySpawner.getCurrentSpawnRate() // reuse to vary
+        enemy.x += Math.cos(t + hexOffset) * 0.01;
+        enemy.y += Math.sin(t + hexOffset) * 0.01;
+
+        // shooting: every attackCooldown fire 6-way pattern
+        (enemy as any).attackTimer = ((enemy as any).attackTimer || 0) + deltaTime;
+        const attackCooldown = (enemy as any).attackCooldown || 2.0
+        if ((enemy as any).attackTimer >= attackCooldown) {
+          (enemy as any).attackTimer = 0
+          // fire 6 directions
+          for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2
+            this.enemyProjectileSystem.createProjectile(
+              enemy.x,
+              enemy.y,
+              enemy.x + Math.cos(angle) * 100,
+              enemy.y + Math.sin(angle) * 100,
+              enemy.attackPower,
+              (enemy as any).projectileSpeed || 400
+            )
+          }
+        }
+      }
+
       const dx = player.x - enemy.x
       const dy = player.y - enemy.y
       const distance = Math.hypot(dx, dy)

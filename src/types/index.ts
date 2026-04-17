@@ -22,6 +22,8 @@ export interface Player extends Vector2 {
   dashDuration?: number
   dashSpeed?: number
   dashLastAt?: number
+  // number of projectiles fired per attack (for multi-shot upgrades)
+  projectileCount?: number
 }
 
 export interface Enemy extends Vector2 {
@@ -38,6 +40,11 @@ export interface Enemy extends Vector2 {
   projectileSpeed?: number
   attackRange?: number
   id: string
+  // boss flags/state
+  isBoss?: boolean
+  phaseIndex?: number
+  phaseTimer?: number
+  shootTimer?: number
 }
 
 export interface Projectile extends Vector2 {

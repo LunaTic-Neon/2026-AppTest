@@ -7,6 +7,7 @@ export class EnemySpawner {
   private waveSize: number = 1
   private waveTimer: number = 0
   private gameTime: number = 0
+  private bossTimer: number = 0
   // smooth growth parameters
   private readonly maxSpawnRate: number = 3.0
   private readonly spawnRateGrowthPerMinute: number = 0.5
@@ -15,6 +16,7 @@ export class EnemySpawner {
     this.gameTime += deltaTime
     this.timeSinceLastSpawn += deltaTime
     this.waveTimer += deltaTime
+    this.bossTimer += deltaTime
 
     this.updateDifficulty()
   }
@@ -137,5 +139,49 @@ export class EnemySpawner {
     this.waveSize = 1
     this.waveTimer = 0
     this.gameTime = 0
+    this.bossTimer = 0
+  }
+
+  // call externally to check if it's time to spawn a boss
+  shouldSpawnBoss(): boolean {
+    return this.bossTimer >= 60
+  }
+  
+  spawnBoss(playerX: number, playerY: number) {
+    // reset timer exactly on spawn
+    this.bossTimer = 0
+    const angle = Math.random() * Math.PI * 2
+    const distance = 600
+    const x = playerX + Math.cos(angle) * distance
+    const y = playerY + Math.sin(angle) * distance
+
+    const hp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 6))
+    const attackPower = GAME_CONFIG.enemy.basicAttackPower * 2
+    const moveSpeed = 80
+
+    const boss: Enemy = {
+      id: `boss_${Date.now()}`,
+      x,
+      y,
+      velocity: { x: 0, y: 0 },
+      radius: GAME_CONFIG.enemy.basicRadius * 1.6, // smaller hex boss
+      hp,
+      maxHp: hp,
+      attackPower,
+      moveSpeed,
+      type: 'tank',
+      // boss markers & phase state
+      isBoss: true,
+      phaseIndex: 0,
+      phaseTimer: 0,
+      shootTimer: 0,
+      // shooting params
+      attackCooldown: 2.0,
+      attackTimer: 0,
+      projectileSpeed: 360,
+      attackRange: 800,
+    }
+
+    return boss
   }
 }

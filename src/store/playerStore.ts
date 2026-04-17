@@ -26,7 +26,7 @@ const INITIAL_PLAYER: Player = {
   maxHp: GAME_CONFIG.player.initialHp,
   level: 1,
   exp: 0,
-  maxExp: 100,
+  maxExp: 80, // faster leveling (was 100)
   attackPower: GAME_CONFIG.player.initialAttackPower,
   attackSpeed: GAME_CONFIG.player.initialAttackSpeed,
   moveSpeed: GAME_CONFIG.player.initialMoveSpeed,
@@ -36,6 +36,7 @@ const INITIAL_PLAYER: Player = {
   dashCooldownMs: 2000,
   dashDuration: 0.18,
   dashSpeed: 900,
+  projectileCount: 1, // default single shot
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -105,7 +106,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
             ...state.player,
             level: state.player.level + 1,
             exp: remainingExp,
-            maxExp: state.player.maxExp * 1.12,
+            maxExp: Math.floor(state.player.maxExp * 1.18), // increased growth
           },
         }
       }
@@ -124,7 +125,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
         ...state.player,
         level: state.player.level + 1,
         exp: 0,
-  maxExp: state.player.maxExp * 1.12,
+  maxExp: Math.floor(state.player.maxExp * 1.18),
       },
     })),
 
