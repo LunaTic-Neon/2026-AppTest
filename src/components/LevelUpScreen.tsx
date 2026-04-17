@@ -8,7 +8,13 @@ export default function LevelUpScreen() {
   const gameStore = useGameStore()
   const playerStore = usePlayerStore()
   const upgradeStore = useUpgradeStore()
-  const [availableUpgrades] = useState<Upgrade[]>(() => upgradeStore.getRandomUpgrades(3))
+  const [availableUpgrades] = useState<Upgrade[]>(() => {
+    // pick a slightly larger pool then filter out weapon upgrade if player already at max
+    const pool = upgradeStore.getRandomUpgrades(6)
+    const playerProj = playerStore.player.projectileCount || 1
+    const filtered = pool.filter((u) => !(u.type === 'weapon' && playerProj >= 5))
+    return filtered.slice(0, 3)
+  })
 
   const handleSelectUpgrade = (upgrade: Upgrade) => {
     applyUpgrade(upgrade)
@@ -106,6 +112,10 @@ export default function LevelUpScreen() {
             <div>
               <p className="text-gray-500">체력</p>
               <p className="text-white font-semibold">{Math.round(playerStore.player.hp)} / {Math.round(playerStore.player.maxHp)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">탄막</p>
+              <p className="text-white font-semibold">{(playerStore.player.projectileCount || 1)} / 5</p>
             </div>
           </div>
         </div>

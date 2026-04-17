@@ -144,7 +144,7 @@ export class EnemySpawner {
 
   // call externally to check if it's time to spawn a boss
   shouldSpawnBoss(): boolean {
-    return this.bossTimer >= 60
+    return this.bossTimer >= 60.0
   }
   
   spawnBoss(playerX: number, playerY: number) {
@@ -155,9 +155,9 @@ export class EnemySpawner {
     const x = playerX + Math.cos(angle) * distance
     const y = playerY + Math.sin(angle) * distance
 
-    const hp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 6))
-    const attackPower = GAME_CONFIG.enemy.basicAttackPower * 2
-    const moveSpeed = 80
+    const hp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 18)) // much larger HP
+    const attackPower = GAME_CONFIG.enemy.basicAttackPower * 2.5
+    const moveSpeed = 70
 
     const boss: Enemy = {
       id: `boss_${Date.now()}`,

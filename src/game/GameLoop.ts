@@ -178,7 +178,13 @@ export class GameLoop {
 
     if (this.enemySpawner.shouldSpawn()) {
       const newEnemies = this.enemySpawner.spawn(player.x, player.y)
+      // scale enemies by player level for increased difficulty
+      const levelScale = 1 + (player.level || 1) * 0.06
       newEnemies.forEach((enemy) => {
+        enemy.hp = Math.max(1, Math.floor(enemy.hp * levelScale))
+        enemy.maxHp = Math.max(1, Math.floor(enemy.maxHp * levelScale))
+        enemy.attackPower = enemy.attackPower * levelScale
+        enemy.moveSpeed = enemy.moveSpeed * (1 + (player.level || 1) * 0.02)
         enemies.push(enemy)
       })
     }
@@ -398,6 +404,12 @@ export class GameLoop {
 
       // 플레이어 위에 체력바
       this.renderer.renderPlayerHealthBar(x, y, hp, maxHp)
+
+      // 보스가 있으면 플레이어 체력바 아래에 보스 체력바 렌더
+      const boss = enemyStore.enemies.find((e) => (e as any).isBoss)
+      if (boss) {
+        this.renderer.renderBossHealthBar(x, y + 35, (boss as any).hp, (boss as any).maxHp)
+      }
 
       // 하단에 경험치바
       this.renderer.renderExperienceBar(exp, maxExp)

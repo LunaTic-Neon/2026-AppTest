@@ -75,6 +75,7 @@ export const useUpgradeStore = create<UpgradeState>((set, get) => ({
 
   getRandomUpgrades: (count) => {
     const available = get().availableUpgrades
+    // shuffle copy
     const result: Upgrade[] = []
     const availableCopy = [...available]
 
