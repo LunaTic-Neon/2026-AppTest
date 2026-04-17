@@ -86,9 +86,19 @@ export default function LevelUpScreen() {
                 </p>
 
                 <div className="text-right">
-                  <span className="text-cyan-400 font-semibold">
-                    +{Math.round((upgrade.value - 1) * 100)}%
-                  </span>
+                  {upgrade.type === 'weapon' ? (
+                    <span className="text-cyan-400 font-semibold">
+                      +1발 ({(playerStore.player.projectileCount || 1)}/5)
+                    </span>
+                  ) : upgrade.type === 'health' ? (
+                    <span className="text-cyan-400 font-semibold">
+                      +{Math.round(upgrade.value * 100)}%
+                    </span>
+                  ) : (
+                    <span className="text-cyan-400 font-semibold">
+                      +{Math.round((upgrade.value - 1) * 100)}%
+                    </span>
+                  )}
                 </div>
               </div>
             </button>

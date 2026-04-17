@@ -119,6 +119,68 @@ export class CanvasRenderer {
   public renderEnemy(enemy: Enemy) {
     const { x, y, radius, type } = enemy
 
+    // ── 최종보스: 정12각형 ─────────────────────────────────
+    if ((enemy as any).isFinalBoss) {
+      const size = radius * 2
+      const sides = 12
+      const angleOffset = -Math.PI / 2
+      const time = Date.now() / 1000
+
+      // 외부 글로우
+      this.ctx.save()
+      this.ctx.shadowColor = '#FF0080'
+      this.ctx.shadowBlur = 24
+
+      this.ctx.fillStyle = '#3D0030'
+      this.ctx.beginPath()
+      for (let i = 0; i < sides; i++) {
+        const a = angleOffset + (i / sides) * Math.PI * 2
+        const vx = x + Math.cos(a) * size
+        const vy = y + Math.sin(a) * size
+        if (i === 0) this.ctx.moveTo(vx, vy)
+        else this.ctx.lineTo(vx, vy)
+      }
+      this.ctx.closePath()
+      this.ctx.fill()
+
+      // 내부 회전 문양
+      this.ctx.strokeStyle = '#FF0080'
+      this.ctx.lineWidth = 2
+      this.ctx.beginPath()
+      for (let i = 0; i < sides; i++) {
+        const a = angleOffset + (i / sides) * Math.PI * 2 + time * 0.6
+        const vx = x + Math.cos(a) * size
+        const vy = y + Math.sin(a) * size
+        if (i === 0) this.ctx.moveTo(vx, vy)
+        else this.ctx.lineTo(vx, vy)
+      }
+      this.ctx.closePath()
+      this.ctx.stroke()
+
+      // 테두리
+      this.ctx.strokeStyle = '#FF4DC4'
+      this.ctx.lineWidth = 3
+      this.ctx.beginPath()
+      for (let i = 0; i < sides; i++) {
+        const a = angleOffset + (i / sides) * Math.PI * 2
+        const vx = x + Math.cos(a) * size
+        const vy = y + Math.sin(a) * size
+        if (i === 0) this.ctx.moveTo(vx, vy)
+        else this.ctx.lineTo(vx, vy)
+      }
+      this.ctx.closePath()
+      this.ctx.stroke()
+
+      this.ctx.restore()
+
+      // BOSS 레이블
+      this.ctx.font = 'bold 16px Arial'
+      this.ctx.fillStyle = '#FF4DC4'
+      this.ctx.textAlign = 'center'
+      this.ctx.fillText('★ BOSS ★', x, y - size - 10)
+      return
+    }
+
     switch (type) {
       case 'shooter': {
         const size = radius * 2.2
@@ -177,6 +239,12 @@ export class CanvasRenderer {
           this.ctx.strokeStyle = '#FFD700'
           this.ctx.lineWidth = 2
           this.ctx.stroke()
+
+          // 중간보스 레이블
+          this.ctx.font = 'bold 14px Arial'
+          this.ctx.fillStyle = '#FFD700'
+          this.ctx.textAlign = 'center'
+          this.ctx.fillText('중간보스', x, y - size - 8)
         } else {
           const size = radius * 2
           this.ctx.fillStyle = '#8B0000'
@@ -349,25 +417,79 @@ export class CanvasRenderer {
     this.ctx.strokeRect(playerX - barWidth / 2, playerY + 35, barWidth, barHeight)
   }
 
-  public renderBossHealthBar(anchorX: number, anchorY: number, bossHP: number, bossMaxHP: number) {
-    // render a wider boss hp bar under player's health bar (anchorY expected to be playerY + offset)
-    const barWidth = 180
-    const barHeight = 10
-    const hpPercent = bossHP / bossMaxHP
+  public renderBossHealthBar(bossX: number, bossY: number, bossRadius: number, bossHP: number, bossMaxHP: number) {
+    // 중간보스 바로 아래에 체력바 표시
+    const barWidth = 120
+    const barHeight = 8
+    const hpPercent = Math.max(0, Math.min(1, bossHP / bossMaxHP))
 
-    const x = anchorX - barWidth / 2
-    const y = anchorY + 10
+    const x = bossX - barWidth / 2
+    const y = bossY + bossRadius * 2 + 10
 
     this.ctx.fillStyle = '#222222'
     this.ctx.fillRect(x, y, barWidth, barHeight)
 
     this.ctx.fillStyle = '#FF4444'
-    this.ctx.fillRect(x, y, barWidth * Math.max(0, Math.min(1, hpPercent)), barHeight)
+    this.ctx.fillRect(x, y, barWidth * hpPercent, barHeight)
 
     // border
-    this.ctx.strokeStyle = GAME_COLORS.ui
+    this.ctx.strokeStyle = '#FFD700'
     this.ctx.lineWidth = 1
     this.ctx.strokeRect(x, y, barWidth, barHeight)
+  }
+
+  // ── 최종보스 체력바 (화면 하단 중앙, 넓고 화려하게) ────────
+  public renderFinalBossHealthBar(hp: number, maxHp: number) {
+    const canvasWidth = GAME_CONFIG.canvas.width
+    const canvasHeight = GAME_CONFIG.canvas.height
+    const barWidth = 600
+    const barHeight = 18
+    const barX = (canvasWidth - barWidth) / 2
+    const barY = canvasHeight - 60
+    const hpPercent = Math.max(0, Math.min(1, hp / maxHp))
+
+    // 레이블
+    this.ctx.font = 'bold 14px Arial'
+    this.ctx.fillStyle = '#FF4DC4'
+    this.ctx.textAlign = 'center'
+    this.ctx.fillText('★ BOSS ★', canvasWidth / 2, barY - 6)
+
+    // 배경
+    this.ctx.fillStyle = '#1A0015'
+    this.ctx.fillRect(barX, barY, barWidth, barHeight)
+
+    // 체력 (그라디언트)
+    const grad = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0)
+    grad.addColorStop(0, '#FF0080')
+    grad.addColorStop(1, '#FF4DC4')
+    this.ctx.fillStyle = grad
+    this.ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight)
+
+    // 테두리
+    this.ctx.strokeStyle = '#FF4DC4'
+    this.ctx.lineWidth = 2
+    this.ctx.strokeRect(barX, barY, barWidth, barHeight)
+
+    // HP 수치
+    this.ctx.font = '12px Arial'
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.fillText(`${Math.ceil(hp)} / ${maxHp}`, canvasWidth / 2, barY + barHeight - 3)
+  }
+
+  // ── 최종보스 등장 카운트다운 (3분 전까지) ─────────────────
+  public renderBossCountdown(remaining: number) {
+    if (remaining <= 0) return
+    const canvasWidth = GAME_CONFIG.canvas.width
+    const minutes = Math.floor(remaining / 60)
+    const seconds = Math.floor(remaining % 60)
+    const text = `BOSS ${minutes}:${String(seconds).padStart(2, '0')}`
+
+    // 30초 이하이면 붉게 강조
+    const isUrgent = remaining <= 30
+    this.ctx.font = `bold ${isUrgent ? 22 : 18}px Arial`
+    this.ctx.fillStyle = isUrgent ? '#FF4444' : '#FFD700'
+    this.ctx.textAlign = 'center'
+    this.ctx.fillText(text, canvasWidth / 2, 40)
   }
 
   public renderExperienceBar(playerExp: number, maxExp: number) {

@@ -69,7 +69,7 @@ export interface Upgrade {
   value: number
 }
 
-export type GameScene = 'menu' | 'playing' | 'paused' | 'levelUp' | 'gameover' | 'story'
+export type GameScene = 'menu' | 'playing' | 'paused' | 'levelUp' | 'gameover' | 'story' | 'stageClear'
 
 export interface JoystickState {
   isActive: boolean
