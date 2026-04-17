@@ -4,6 +4,9 @@ import { GAME_CONFIG } from '../config/gameConfig'
 
 interface PlayerState {
   player: Player
+  // dash control
+  tryDash: (dirX: number, dirY: number) => void
+  tickDash: (deltaTime: number) => void
   setPlayerPosition: (x: number, y: number) => void
   setPlayerVelocity: (vx: number, vy: number) => void
   setPlayerRotation: (rotation: number) => void
@@ -28,10 +31,49 @@ const INITIAL_PLAYER: Player = {
   attackSpeed: GAME_CONFIG.player.initialAttackSpeed,
   moveSpeed: GAME_CONFIG.player.initialMoveSpeed,
   rotation: 0,
+  dashTimeRemaining: 0,
+  dashVelocity: { x: 0, y: 0 },
+  dashCooldownMs: 2000,
+  dashDuration: 0.18,
+  dashSpeed: 900,
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
   player: INITIAL_PLAYER,
+
+  tryDash: (dirX: number, dirY: number) =>
+    set((state) => {
+      const now = Date.now()
+  const cd = (state.player as any).dashLastAt || 0
+  const cooldownMs = (state.player as any).dashCooldownMs || 2000
+      if (now - cd < cooldownMs) return { player: state.player }
+
+      const magnitude = Math.hypot(dirX, dirY) || 1
+      const nx = dirX / magnitude
+      const ny = dirY / magnitude
+
+      // set dash velocity and timer for smooth dash (applied per-frame)
+      const dashSpeed = (state.player as any).dashSpeed || 1200
+      const dashDuration = (state.player as any).dashDuration || 0.18
+
+      return {
+        player: {
+          ...state.player,
+          dashTimeRemaining: dashDuration,
+          dashVelocity: { x: nx * dashSpeed, y: ny * dashSpeed },
+          dashLastAt: now,
+        } as any,
+      }
+    }),
+  tickDash: (deltaTime: number) =>
+    set((state) => {
+      const remaining = Math.max(0, (state.player.dashTimeRemaining || 0) - deltaTime)
+      const playerUpdate: any = { ...state.player, dashTimeRemaining: remaining }
+      if (remaining <= 0) {
+        playerUpdate.dashVelocity = { x: 0, y: 0 }
+      }
+      return { player: playerUpdate }
+    }),
 
   setPlayerPosition: (x, y) =>
     set((state) => ({
@@ -63,7 +105,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
             ...state.player,
             level: state.player.level + 1,
             exp: remainingExp,
-            maxExp: state.player.maxExp * 1.15,
+            maxExp: state.player.maxExp * 1.12,
           },
         }
       }
@@ -82,7 +124,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
         ...state.player,
         level: state.player.level + 1,
         exp: 0,
-        maxExp: state.player.maxExp * 1.15,
+  maxExp: state.player.maxExp * 1.12,
       },
     })),
 

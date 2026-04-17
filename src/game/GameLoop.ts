@@ -2,12 +2,13 @@ import { CanvasRenderer } from './canvas/CanvasRenderer'
 import { useGameStore } from '../store/gameStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useEnemyStore } from '../store/enemyStore'
-import { GAME_CONFIG } from '../config/gameConfig'
+import { GAME_CONFIG, getExpMultiplier } from '../config/gameConfig'
 import { Player } from '../types'
 import { EnemySpawner } from './EnemySpawner'
 import { AutoAttack } from './AutoAttack'
 import { CollisionDetection } from './CollisionDetection'
-import { DebugSystem } from './DebugSystem'
+import { EnemyProjectileSystem } from './EnemyProjectile'
+// DebugSystem removed (unused) to avoid unused variable warnings
 
 export class GameLoop {
   private renderer: CanvasRenderer
@@ -16,14 +17,14 @@ export class GameLoop {
   private isRunning: boolean = false
   private enemySpawner: EnemySpawner
   private autoAttack: AutoAttack
-  private debugSystem: DebugSystem
+  private enemyProjectileSystem: EnemyProjectileSystem
   private lastPlayerLevel: number = 1
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new CanvasRenderer(canvas)
     this.enemySpawner = new EnemySpawner()
-    this.autoAttack = new AutoAttack()
-    this.debugSystem = new DebugSystem()
+  this.autoAttack = new AutoAttack()
+  this.enemyProjectileSystem = new EnemyProjectileSystem()
     this.setupEventListeners()
     this.enemySpawner.reset()
   }
@@ -31,10 +32,33 @@ export class GameLoop {
   public reset() {
     this.enemySpawner.reset()
     this.autoAttack.reset()
+  this.enemyProjectileSystem.reset()
   }
 
   private setupEventListeners() {
     window.addEventListener('resize', () => this.renderer.resize())
+    // dash on Space
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        const playerStore = usePlayerStore.getState()
+        const player = playerStore.player
+
+        // prefer movement vector from keyboard/joystick
+        const keyboard = this.renderer.getKeyboardInput()
+        const joystick = this.renderer.getJoystickInput()
+        let mv = keyboard.getMovementVector()
+        if (mv.x === 0 && mv.y === 0) mv = joystick.getMovementVector()
+
+        if (mv.x !== 0 || mv.y !== 0) {
+          usePlayerStore.getState().tryDash(mv.x, mv.y)
+        } else {
+          // dash forward in facing direction
+          const nx = Math.cos(player.rotation)
+          const ny = Math.sin(player.rotation)
+          usePlayerStore.getState().tryDash(nx, ny)
+        }
+      }
+    })
   }
 
   public start() {
@@ -104,19 +128,41 @@ export class GameLoop {
     const player = playerStore.player
     const moveSpeed = player.moveSpeed
 
-    if (movementVector.x !== 0 || movementVector.y !== 0) {
-      playerStore.setPlayerVelocity(
-        movementVector.x * moveSpeed,
-        movementVector.y * moveSpeed
-      )
+    // Dash handling: if a dash is active, apply dash velocity and decrement timer.
+    if (player.dashTimeRemaining && player.dashTimeRemaining > 0) {
+      // apply dash movement directly to position with bounds clamping
+      const dv = player.dashVelocity || { x: 0, y: 0 }
+      const canvasSize = this.renderer.getCanvasSize()
+      const padding = player.radius
 
-      const rotation = Math.atan2(movementVector.y, movementVector.x)
-      playerStore.setPlayerRotation(rotation)
+      const targetX = Math.max(padding, Math.min(player.x + dv.x * deltaTime, canvasSize.width - padding))
+      const targetY = Math.max(padding, Math.min(player.y + dv.y * deltaTime, canvasSize.height - padding))
+
+      playerStore.setPlayerPosition(targetX, targetY)
+      playerStore.setPlayerVelocity(dv.x, dv.y)
+
+      // decrement timer via store helper
+      usePlayerStore.getState().tickDash(deltaTime)
+
+      // when finished, ensure velocity cleared
+      if ((usePlayerStore.getState().player.dashTimeRemaining || 0) <= 0) {
+        playerStore.setPlayerVelocity(0, 0)
+      }
     } else {
-      playerStore.setPlayerVelocity(0, 0)
-    }
+      if (movementVector.x !== 0 || movementVector.y !== 0) {
+        playerStore.setPlayerVelocity(
+          movementVector.x * moveSpeed,
+          movementVector.y * moveSpeed
+        )
 
-    this.updatePlayerPosition(playerStore.player, deltaTime)
+        const rotation = Math.atan2(movementVector.y, movementVector.x)
+        playerStore.setPlayerRotation(rotation)
+      } else {
+        playerStore.setPlayerVelocity(0, 0)
+      }
+
+      this.updatePlayerPosition(playerStore.player, deltaTime)
+    }
   }
 
   private updateEnemies(
@@ -149,6 +195,20 @@ export class GameLoop {
 
       enemy.x += enemy.velocity.x * deltaTime
       enemy.y += enemy.velocity.y * deltaTime
+
+      // shooter attack logic
+      if (enemy.type === 'shooter') {
+        enemy.attackTimer = (enemy.attackTimer || 0) + deltaTime
+        const attackRange = enemy.attackRange || 400
+        const attackCooldown = enemy.attackCooldown || 1.2
+        if (Math.hypot(player.x - enemy.x, player.y - enemy.y) <= attackRange) {
+          if ((enemy.attackTimer || 0) >= attackCooldown) {
+            // fire a projectile at player
+            this.enemyProjectileSystem.createProjectile(enemy.x, enemy.y, player.x, player.y, enemy.attackPower, enemy.projectileSpeed || 500)
+            enemy.attackTimer = 0
+          }
+        }
+      }
     }
 
     const canvasSize = this.renderer.getCanvasSize()
@@ -204,7 +264,9 @@ export class GameLoop {
           enemyStore.removeEnemyById(enemy.id)
           gameStore.addKill()
 
-          const expGained = Math.max(10, Math.floor(enemy.maxHp / 2))
+          const baseExp = Math.max(10, Math.floor(enemy.maxHp / 2))
+          const multiplier = getExpMultiplier(gameStore.gameTime)
+          const expGained = Math.max(1, Math.floor(baseExp * multiplier))
           playerStore.addPlayerExp(expGained)
 
           enemies.splice(enemyIndex, 1)
@@ -215,6 +277,17 @@ export class GameLoop {
     const collidingEnemy = CollisionDetection.checkPlayerEnemyCollision(player, enemies)
     if (collidingEnemy) {
       playerStore.setPlayerHP(player.hp - collidingEnemy.attackPower * 0.016)
+    }
+
+    // Update enemy projectiles and check collisions against player
+    this.enemyProjectileSystem.update(GAME_CONFIG.gameplay.deltaTimeMax, this.renderer.getCanvasSize().width, this.renderer.getCanvasSize().height)
+    const enemyProjectiles = this.enemyProjectileSystem.getProjectiles()
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+      const p = enemyProjectiles[i]
+      if (CollisionDetection.checkCircleCollision(player, player.radius, p, p.radius)) {
+        playerStore.setPlayerHP(player.hp - p.damage)
+        this.enemyProjectileSystem.removeProjectile(i)
+      }
     }
   }
 
@@ -245,6 +318,7 @@ export class GameLoop {
       this.renderer.renderPlayer(playerStore.player)
       this.renderer.renderEnemies(enemyStore.enemies)
       this.renderer.renderProjectiles(this.autoAttack.getProjectiles())
+  this.renderer.renderProjectiles(this.enemyProjectileSystem.getProjectiles())
 
       const mouseInput = this.renderer.getMouseInput()
       const mousePos = mouseInput.getMousePosition()

@@ -15,6 +15,13 @@ export interface Player extends Vector2 {
   attackSpeed: number
   moveSpeed: number
   rotation: number
+  // Dash state (optional)
+  dashTimeRemaining?: number
+  dashVelocity?: Vector2
+  dashCooldownMs?: number
+  dashDuration?: number
+  dashSpeed?: number
+  dashLastAt?: number
 }
 
 export interface Enemy extends Vector2 {
@@ -24,7 +31,12 @@ export interface Enemy extends Vector2 {
   maxHp: number
   attackPower: number
   moveSpeed: number
-  type: 'basic' | 'fast' | 'tank'
+  type: 'basic' | 'fast' | 'tank' | 'shooter'
+  // shooter-specific (optional)
+  attackCooldown?: number
+  attackTimer?: number
+  projectileSpeed?: number
+  attackRange?: number
   id: string
 }
 

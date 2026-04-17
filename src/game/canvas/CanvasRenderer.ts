@@ -120,6 +120,27 @@ export class CanvasRenderer {
     const { x, y, radius, type } = enemy
 
     switch (type) {
+      case 'shooter': {
+        const size = radius * 2.2
+        const sides = 5
+        const angleOffset = -Math.PI / 2
+        this.ctx.fillStyle = '#9B5CF6' // purple-ish for shooter
+        this.ctx.beginPath()
+        for (let i = 0; i < sides; i++) {
+          const a = angleOffset + (i / sides) * Math.PI * 2
+          const vx = x + Math.cos(a) * size
+          const vy = y + Math.sin(a) * size
+          if (i === 0) this.ctx.moveTo(vx, vy)
+          else this.ctx.lineTo(vx, vy)
+        }
+        this.ctx.closePath()
+        this.ctx.fill()
+
+        this.ctx.strokeStyle = '#FFFFFF'
+        this.ctx.lineWidth = 2
+        this.ctx.stroke()
+        break
+      }
       case 'fast': {
         const size = radius * 2
         this.ctx.fillStyle = '#FFAA00'
@@ -249,9 +270,8 @@ export class CanvasRenderer {
     }
   }
 
-  public renderHUD(gameTime: number, killCount: number, playerHP: number, maxHP: number, playerLevel: number, playerExp: number, maxExp: number) {
-    const canvasWidth = GAME_CONFIG.canvas.width
-    const canvasHeight = GAME_CONFIG.canvas.height
+  public renderHUD(gameTime: number, killCount: number, _playerHP: number, _maxHP: number, playerLevel: number, _playerExp: number, _maxExp: number) {
+  const canvasWidth = GAME_CONFIG.canvas.width
     
     // 우측 상단 정보 패널 (생존시간, 처치, 레벨만)
     const panelX = canvasWidth - 280

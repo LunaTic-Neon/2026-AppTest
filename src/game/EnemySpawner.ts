@@ -7,6 +7,9 @@ export class EnemySpawner {
   private waveSize: number = 1
   private waveTimer: number = 0
   private gameTime: number = 0
+  // smooth growth parameters
+  private readonly maxSpawnRate: number = 3.0
+  private readonly spawnRateGrowthPerMinute: number = 0.5
 
   update(deltaTime: number): void {
     this.gameTime += deltaTime
@@ -17,16 +20,17 @@ export class EnemySpawner {
   }
 
   private updateDifficulty(): void {
-    const timeInSeconds = Math.floor(this.gameTime)
+  // Smooth continuous spawn rate growth with an upper bound.
+  const minutes = this.gameTime / 60
+  const growth = minutes * this.spawnRateGrowthPerMinute
+  this.spawnRate = Math.min(0.35 + growth, this.maxSpawnRate)
 
-    if (timeInSeconds > 0 && timeInSeconds % 20 === 0) {
-      this.spawnRate = Math.min(this.spawnRate + 0.5, 8)
-    }
+  // Wave size increases gradually every 30s, capped at 5.
+  const desiredWaveSize = 1 + Math.floor(this.gameTime / 30)
+  this.waveSize = Math.min(desiredWaveSize, 5)
 
-    if (timeInSeconds > 0 && timeInSeconds % 30 === 0) {
-      this.waveSize = Math.min(this.waveSize + 1, 5)
-      this.waveTimer = 0
-    }
+  // Keep waveTimer bounded to prevent large bursts from previous logic.
+  if (this.waveTimer > 30) this.waveTimer = 30
   }
 
   shouldSpawn(): boolean {
@@ -69,22 +73,39 @@ export class EnemySpawner {
       maxHp: stats.hp,
       attackPower: stats.attackPower,
       moveSpeed: stats.moveSpeed,
-      type,
+  type,
+  // shooter-specific optional fields
+  attackCooldown: (stats as any).attackCooldown,
+  projectileSpeed: (stats as any).projectileSpeed,
+  attackRange: (stats as any).attackRange,
+  attackTimer: 0,
     }
   }
 
-  private getRandomEnemyType(): 'basic' | 'fast' | 'tank' {
+  private getRandomEnemyType(): 'basic' | 'fast' | 'tank' | 'shooter' {
     const rand = Math.random()
-    if (rand < 0.7) return 'basic'
-    if (rand < 0.85) return 'fast'
-    return 'tank'
+  if (rand < 0.6) return 'basic'
+  if (rand < 0.8) return 'fast'
+  if (rand < 0.95) return 'tank'
+  return 'shooter'
   }
 
-  private getEnemyStats(type: 'basic' | 'fast' | 'tank') {
+  private getEnemyStats(type: 'basic' | 'fast' | 'tank' | 'shooter') {
     const difficultyMultiplier = 1 + this.gameTime / 60
     const base = GAME_CONFIG.enemy
 
     switch (type) {
+      case 'shooter':
+        return {
+          hp: base.basicHp * 0.9 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 0.9 * difficultyMultiplier,
+          moveSpeed: base.basicMoveSpeed * 0.8,
+          // shooter-specific
+          projectileSpeed: 500,
+          attackRange: 500,
+          attackCooldown: 1.2,
+        }
+      
       case 'fast':
         return {
           hp: base.basicHp * 0.7 * difficultyMultiplier,
