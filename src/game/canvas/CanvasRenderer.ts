@@ -126,6 +126,8 @@ export class CanvasRenderer {
       const angleOffset = -Math.PI / 2
       const time = Date.now() / 1000
       const pattern = (enemy as any).bossPattern
+      const phase = (enemy as any).patternPhase
+      const activePattern = phase === 'active' || phase === 'start' || phase === 'centralizing' ? pattern : 0
 
       this.ctx.save()
 
@@ -135,26 +137,26 @@ export class CanvasRenderer {
       }
 
       // 외부 글로우
-      if (pattern === 1) {
+      if (activePattern === 1) {
         // 패턴 1: 밝기 변화
         const brightness = (enemy as any).patternBrightness || 0
         this.ctx.shadowColor = `rgba(255, 0, 128, ${0.3 + brightness * 0.7})`
         this.ctx.shadowBlur = 24 + brightness * 20
-      } else if (pattern === 2) {
+      } else if (activePattern === 2) {
         // 패턴 2: 파란색 기본
         this.ctx.shadowColor = '#0080FF'
         this.ctx.shadowBlur = 24
       } else {
-        // 패턴 3: 초록색/무적 표시
-        this.ctx.shadowColor = '#00FF00'
+        // 기본 색상 (패턴 종료 후 즉시 복귀)
+        this.ctx.shadowColor = '#FF4DC4'
         this.ctx.shadowBlur = 20
       }
 
       // 보스 몸체
       let fillColor = '#3D0030'
-      if (pattern === 2) {
+      if (activePattern === 2) {
         fillColor = '#003D3D'
-      } else if (pattern === 3) {
+      } else if (activePattern === 3) {
         fillColor = '#1A3D1A'
       }
       this.ctx.fillStyle = fillColor
@@ -171,9 +173,9 @@ export class CanvasRenderer {
 
       // 내부 회전 문양
       let strokeColor = '#FF0080'
-      if (pattern === 2) {
+      if (activePattern === 2) {
         strokeColor = '#0080FF'
-      } else if (pattern === 3) {
+      } else if (activePattern === 3) {
         strokeColor = '#00FF00'
       }
       this.ctx.strokeStyle = strokeColor
@@ -191,9 +193,9 @@ export class CanvasRenderer {
 
       // 테두리
       let borderColor = '#FF4DC4'
-      if (pattern === 2) {
+      if (activePattern === 2) {
         borderColor = '#00BFFF'
-      } else if (pattern === 3) {
+      } else if (activePattern === 3) {
         borderColor = '#00FF00'
       }
       this.ctx.strokeStyle = borderColor
@@ -210,7 +212,7 @@ export class CanvasRenderer {
       this.ctx.stroke()
 
       // 패턴 2: 막 렌더링
-      if (pattern === 2 && (enemy as any).shieldHealth !== undefined) {
+      if (activePattern === 2 && (enemy as any).shieldHealth !== undefined) {
         const shieldRadius = size * 1.3
         this.ctx.strokeStyle = '#0080FF'
         this.ctx.lineWidth = 4
@@ -225,9 +227,9 @@ export class CanvasRenderer {
 
       // BOSS 레이블
       this.ctx.font = 'bold 16px Arial'
-      if (pattern === 2) {
+      if (activePattern === 2) {
         this.ctx.fillStyle = '#00BFFF'
-      } else if (pattern === 3) {
+      } else if (activePattern === 3) {
         this.ctx.fillStyle = '#00FF00'
       } else {
         this.ctx.fillStyle = '#FF4DC4'
@@ -506,21 +508,22 @@ export class CanvasRenderer {
     this.ctx.strokeRect(x, y, barWidth, barHeight)
   }
 
-  // ── 최종보스 체력바 (화면 하단 중앙, 넓고 화려하게) ────────
+  // ── 최종보스 체력바 (화면 상단 중앙, 넓고 화려하게) ────────
   public renderFinalBossHealthBar(hp: number, maxHp: number, boss?: any) {
     const canvasWidth = GAME_CONFIG.canvas.width
-    const canvasHeight = GAME_CONFIG.canvas.height
     const barWidth = 600
     const barHeight = 18
     const barX = (canvasWidth - barWidth) / 2
-    const barY = canvasHeight - 60
+    const barY = 18
     const hpPercent = Math.max(0, Math.min(1, hp / maxHp))
+    const phase = boss?.patternPhase
+    const activePattern = phase === 'active' || phase === 'start' || phase === 'centralizing' ? boss?.bossPattern : 0
 
     // 레이블
     let labelColor = '#FF4DC4'
-    if (boss?.bossPattern === 2) {
+    if (activePattern === 2) {
       labelColor = '#00BFFF'
-    } else if (boss?.bossPattern === 3) {
+    } else if (activePattern === 3) {
       labelColor = '#00FF00'
     }
 
@@ -535,10 +538,10 @@ export class CanvasRenderer {
 
     // 체력 (그라디언트)
     const grad = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0)
-    if (boss?.bossPattern === 2) {
+    if (activePattern === 2) {
       grad.addColorStop(0, '#0080FF')
       grad.addColorStop(1, '#00BFFF')
-    } else if (boss?.bossPattern === 3) {
+    } else if (activePattern === 3) {
       grad.addColorStop(0, '#00FF00')
       grad.addColorStop(1, '#00FF80')
     } else {
@@ -559,11 +562,12 @@ export class CanvasRenderer {
     this.ctx.fillText(`${Math.ceil(hp)} / ${maxHp}`, canvasWidth / 2, barY + barHeight - 3)
 
     // 패턴 2: 막 체력바 및 카운트다운
-    if (boss?.bossPattern === 2 && boss?.shieldMaxHealth !== undefined) {
+    if (activePattern === 2 && boss?.shieldMaxHealth !== undefined) {
       const shieldPercent = Math.max(0, Math.min(1, boss.shieldHealth / boss.shieldMaxHealth))
       const shieldBarY = barY + 35
       const shieldBarWidth = 300
       const shieldBarX = (canvasWidth - shieldBarWidth) / 2
+      const shieldBarHeight = 16
 
       // 막 레이블
       this.ctx.font = 'bold 12px Arial'
@@ -573,16 +577,16 @@ export class CanvasRenderer {
 
       // 막 체력바 배경
       this.ctx.fillStyle = '#0A1A2E'
-      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth, 12)
+      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth, shieldBarHeight)
 
       // 막 체력 (파란색)
       this.ctx.fillStyle = '#0080FF'
-      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth * shieldPercent, 12)
+      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth * shieldPercent, shieldBarHeight)
 
       // 막 체력바 테두리
       this.ctx.strokeStyle = '#00BFFF'
-      this.ctx.lineWidth = 1
-      this.ctx.strokeRect(shieldBarX, shieldBarY, shieldBarWidth, 12)
+      this.ctx.lineWidth = 2
+      this.ctx.strokeRect(shieldBarX, shieldBarY, shieldBarWidth, shieldBarHeight)
 
       // 카운트다운 표시
       const countdown = Math.max(0, Math.ceil(boss.shieldCountdown || 0))
@@ -593,7 +597,7 @@ export class CanvasRenderer {
     }
 
     // 패턴 3: 무적 표시
-    if (boss?.bossPattern === 3 && boss?.invulnerable) {
+    if (activePattern === 3 && boss?.invulnerable) {
       this.ctx.font = 'bold 20px Arial'
       this.ctx.fillStyle = '#00FF00'
       this.ctx.textAlign = 'center'

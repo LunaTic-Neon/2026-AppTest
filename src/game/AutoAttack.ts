@@ -4,7 +4,8 @@ import { ProjectileSystem } from './Projectile'
 
 export class AutoAttack {
   private attackCooldown: number = 0
-  private detectionRange: number = 400
+  // 자동 타겟 탐지 범위를 넓혀 오프스크린 근처 적도 인식하도록 조정
+  private detectionRange: number = 620
   private projectileSystem: ProjectileSystem
 
   constructor() {

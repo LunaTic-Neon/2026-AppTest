@@ -16,8 +16,8 @@ const FINAL_BOSS_DODGE_SPEED = 620  // 회피 대시 속도
 const FINAL_BOSS_DODGE_DURATION = 0.28 // 대시 지속 시간
 const FINAL_BOSS_DODGE_COOLDOWN = 1.6  // 대시 쿨다운
 
-// 동시에 유지할 일반 적 최대 수 (보스 제외)
-const MAX_NORMAL_ENEMIES = 80
+// 동시에 유지할 일반 적 기본 최대 수 (보스 제외)
+const MAX_NORMAL_ENEMIES = 110
 
 export class GameLoop {
   private renderer: CanvasRenderer
@@ -180,8 +180,9 @@ export class GameLoop {
 
     this.enemySpawner.update(deltaTime)
 
-    // ── 일반 적 스폰 (최대 수 제한) ─────────────────────────
-    if (normalCount < MAX_NORMAL_ENEMIES && this.enemySpawner.shouldSpawn()) {
+    // ── 일반 적 스폰 (시간 기반으로 상한 완화: 후반에도 꾸준히 등장) ─────
+    const dynamicNormalCap = Math.min(MAX_NORMAL_ENEMIES + Math.floor(gameStore.gameTime / 30) * 15, 220)
+    if (normalCount < dynamicNormalCap && this.enemySpawner.shouldSpawn()) {
       const newEnemies = this.enemySpawner.spawn(player.x, player.y)
       const levelScale = 1 + (player.level || 1) * 0.06
       newEnemies.forEach((enemy) => {
@@ -225,6 +226,8 @@ export class GameLoop {
           fb.patternPhase = 'start'
           fb.inPatternCooldown = false
           fb.patternCooldownTimer = 0
+          fb.idleShotTimer = 0
+          fb.idleShotCooldown = 1.5
           fb.fbDodgeCd = 0
           fb.fbDodging = false
           fb.fbDodgeTimer = 0
@@ -234,6 +237,28 @@ export class GameLoop {
         // ── 패턴 쿨다운 또는 패턴 실행 ─────────────────────
         if (fb.inPatternCooldown) {
           fb.patternCooldownTimer -= deltaTime
+
+          // 패턴 비활성 구간에도 가끔 3연발 원거리 견제
+          fb.idleShotTimer += deltaTime
+          if (fb.idleShotTimer >= fb.idleShotCooldown) {
+            fb.idleShotTimer = 0
+            fb.idleShotCooldown = 1.2 + Math.random() * 1.0
+
+            const baseAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x)
+            const spreads = [-0.2, 0, 0.2]
+            for (const offset of spreads) {
+              const angle = baseAngle + offset
+              this.enemyProjectileSystem.createProjectile(
+                enemy.x,
+                enemy.y,
+                enemy.x + Math.cos(angle) * 160,
+                enemy.y + Math.sin(angle) * 160,
+                enemy.attackPower,
+                enemy.projectileSpeed || 460
+              )
+            }
+          }
+
           if (fb.patternCooldownTimer <= 0) {
             fb.inPatternCooldown = false
             fb.bossPattern = this.selectBossPattern()
@@ -248,6 +273,10 @@ export class GameLoop {
 
           if (this.isPatternFinished(enemy)) {
             // 패턴 1: 3초 쿨다운, 패턴 2/3: 5초 쿨다운
+            if (cp === 3) {
+              // 패턴 3 종료 즉시 무적/색상 상태를 해제해 다음 패턴 전에도 기본색 복귀
+              fb.invulnerable = false
+            }
             fb.inPatternCooldown = true
             fb.patternCooldownTimer = cp === 1 ? 3.0 : 5.0
           }
