@@ -1,263 +1,175 @@
 # AGENT.md — Ruin's City
 
-> AI 에이전트 전용 레포지토리 가이드. 코드 수정 전 이 파일을 먼저 읽으세요.
+> 이 파일은 AI 에이전트용 작업 가이드입니다. 코드를 수정하기 전에 먼저 읽고, 중요한 변경 뒤에는 반드시 갱신합니다.
 > 마지막 업데이트: 2026-04-18
 
-## 변경 기록 규칙 (필수)
+## 목적
 
-- 앞으로 **중요 로직/밸런스/UI 변경 시 반드시 이 파일에 기록**합니다.
-- 기록 형식은 아래 `최근 중요 변경 로그`에 날짜/요약/수정 파일/검증 결과를 추가합니다.
-- 새 AI 에이전트는 작업 시작 전에 이 파일과 최근 로그를 먼저 확인합니다.
+- 이 프로젝트는 React UI와 별도 GameLoop가 공존하는 구조라서, 처음 들어온 에이전트가 흐름을 잘못 잡기 쉽습니다.
+- 이 문서는 현재 구조, 자주 수정되는 위치, 최근에 바뀐 중요한 기능만 짧게 정리합니다.
+- 수치가 자주 바뀌는 밸런스 값은 가능한 한 “어디를 보면 되는지” 위주로 적고, 오래된 숫자 나열은 최소화합니다.
+
+## 작업 규칙
+
+- 중요 로직, UI 흐름, 메타 저장 구조, 밸런스 축 변경 시 이 파일의 `최근 중요 변경 로그`를 갱신합니다.
+- 숫자 하나만 바뀐 수준이 아니라 플레이 감각이나 저장 데이터에 영향이 있으면 기록합니다.
+- 작업 검증으로 `npm run build`를 돌렸다면 로그에 함께 적습니다.
 
 ## 최근 중요 변경 로그
 
-### 2026-04-18 (세션 업데이트)
+### 2026-04-18
 
-- 설정 기능 구현:
-  - `마스터/배경음/효과음/보이스` 볼륨 슬라이더 추가
-  - 메뉴 `SETTINGS`와 게임 중 `일시정지`에서 동일 설정 패널 사용
-- 배속 시스템 구현:
-  - 배속 옵션: `x1.0 / x1.1 / x1.2 / x1.3`
-  - `STORE`에서 배속 업그레이드 구매 가능
-  - 미구매 배속은 `SETTINGS`에서 잠금 표시
-  - 구매 후 `SETTINGS` 및 일시정지 설정에서 즉시 선택 가능
-  - 선택 배속은 `GameLoop` 전투/이동/스폰/시간 경과 전체에 반영
-- 보스 패턴 1 안정화:
-  - 플레이어 기준 대칭 순간이동 시 보스 좌표를 캔버스 내부로 clamp
-  - 해상도/캔버스 크기에 맞춰 화면 밖 이탈 방지
-- 중간보스 패턴 템포 조정:
-  - 도약/탄막 주기를 기존 대비 10% 느리게 조정
-
-수정 파일:
-- `src/store/metaProgressionStore.ts`
-- `src/components/SettingsPanel.tsx`
-- `src/App.tsx`
-- `src/game/GameLoop.ts`
+- 메타 진행도 확장:
+  - 언어 설정 `ko/en/ja`
+  - 스테이지 클리어 체크 표시용 `clearedStages`
+  - 프롤로그 초회 보상 플래그 `prologueRewarded`
+  - 전체 진행 초기화 액션 추가
+- 설정/상점/배속:
+  - 설정 패널에 볼륨 직접 숫자 입력 추가
+  - 배속 해금/선택 시스템 확장, 현재 `x1.0 / x1.1 / x1.2 / x1.3 / x1.5`
+  - 상점에서 상위 배속은 이전 배속 구매 후 해금
+- 스토리/메뉴 흐름:
+  - 프롤로그는 게임 시작 없이 스토리만 재생
+  - 프롤로그 첫 완료 시 1회 한정 500 골드 지급
+  - 스테이지 선택 타일에 클리어 체크 표시
+  - `Esc`로 설정/상점/스토리 화면에서 메인 메뉴 복귀 가능
+- 플레이 감각/밸런스:
+  - 대시 중 플레이어 무적 및 시각적 어둡게 처리
+  - 적 탄막은 대시 중 플레이어를 관통하고 사라지지 않음
+  - 첫 중간보스 HP 하향, 세 번째 중간보스 HP 상향
+  - 일반 적 공격력 소폭 하향, 중간보스/최종보스 공격력 비율 재조정
+  - 잡몹끼리 과도하게 겹치지 않도록 분리 로직 추가
+  - 플레이어 초기 공격속도는 초당 발사 횟수 기준 `1.5`
+- HUD/렌더링:
+  - 조준점 빨간 원형 십자선으로 변경
+  - 우측 상단 HUD를 `Time / Kill / Level / HP` 형식으로 정리
+  - 플레이어 하단 체력바와 HUD 체력바의 경고 색상 기준 통일
 
 검증:
+
 - `npm run build` 통과
 
----
+## 프로젝트 개요
 
-## 프로젝트 한줄 요약
+Ruin's City는 React + TypeScript + Canvas 기반의 탑다운 생존 슈터입니다.
 
-**Ruin's City** — 탑다운 캔버스 기반 아레나 생존 게임.  
-React는 UI 전용, 실제 게임 로직은 imperative GameLoop 클래스가 담당합니다.
+- 실시간 게임 로직은 `src/game/GameLoop.ts`가 담당합니다.
+- React는 메뉴, 오버레이, 설정, 스토리 UI를 담당합니다.
+- 상태 관리는 Zustand를 사용합니다.
+- 영구 진행도는 `metaProgressionStore`를 통해 `localStorage`에 저장합니다.
 
-**기술 스택:** React 18 + TypeScript + Vite + Zustand + Tailwind CSS + HTML5 Canvas
+## 가장 중요한 구조
 
----
+### 1. React와 GameLoop는 역할이 다릅니다
 
-## 디렉토리 구조 & 역할
+- React:
+  - 메뉴 화면
+  - 상점 / 설정 / 스토리 / 레벨업 / 스테이지 클리어 UI
+  - `App.tsx`에서 GameLoop 생명주기 관리
+- GameLoop:
+  - 이동
+  - 공격
+  - 적 스폰
+  - 보스 패턴
+  - 충돌 판정
+  - 캔버스 렌더 호출
 
-```
-src/
-├── App.tsx                     # React 루트: 씬 라우팅, 메뉴 UI, GameLoop 생명주기
-├── main.tsx                    # ReactDOM 진입점
-├── index.css                   # Tailwind 기본 스타일
-│
-├── types/index.ts              # 전역 타입 정의 (Vector2, Player, Enemy, Projectile 등)
-│
-├── config/
-│   ├── constants.ts            # MOBILE_BREAKPOINTS, GAME_COLORS
-│   └── gameConfig.ts           # GAME_CONFIG(해상도·초기값), JOYSTICK_CONFIG, EXP_CONFIG
-│                                 + getExpMultiplier() 경험치 배율 함수
-│
-├── store/                      # Zustand 스토어 (도메인별)
-│   ├── gameStore.ts            # 씬·게임시간·킬수·스테이지·보스 플래그
-│   ├── playerStore.ts          # 플레이어 상태 + 대시 로직
-│   ├── enemyStore.ts           # 적 배열 CRUD
-│   ├── upgradeStore.ts         # 업그레이드 목록 + applyUpgrade
-│   ├── metaProgressionStore.ts # 영구 재화(Scrap/Data), 해금 정보, localStorage 동기화
-│   └── storyStore.ts           # 스토리 씬 진행, 선택지, 플래그
-│
-├── game/
-│   ├── GameLoop.ts             # ★ 메인 루프 (update → render, 씬 전환 트리거)
-│   ├── EnemySpawner.ts         # 적 스폰률·웨이브·중간보스·최종보스 스폰 판정
-│   ├── AutoAttack.ts           # 플레이어 자동/마우스 공격, 발사체 관리
-│   ├── Projectile.ts           # 플레이어 투사체 시스템 (ProjectileSystem)
-│   ├── EnemyProjectile.ts      # 적 투사체 시스템 (EnemyProjectileSystem)
-│   ├── CollisionDetection.ts   # 원 충돌 감지 유틸 (static 메서드)
-│   ├── DebugSystem.ts          # FPS·엔티티 카운트 디버그 overlay
-│   ├── canvas/
-│   │   └── CanvasRenderer.ts   # 캔버스 DPR 설정, 모든 렌더 메서드, 입력 어댑터 보관
-│   └── input/
-│       ├── KeyboardInput.ts    # WASD + 화살표 키 → movementVector
-│       ├── JoystickInput.ts    # 모바일 터치 조이스틱 → movementVector
-│       └── MouseInput.ts       # 마우스 위치·좌클릭 상태 추적
-│
-└── components/
-    ├── LevelUpScreen.tsx       # 레벨업 업그레이드 선택 모달
-    └── StageClearScreen.tsx    # 스테이지 클리어 결과 화면
-```
+중요 원칙:
 
----
+- 실시간 전투 로직은 React state로 옮기지 않습니다.
+- `GameLoop` 내부에서는 훅이 아니라 `useXxxStore.getState()`를 사용합니다.
+- 화면 전환은 store 상태를 통해 연결하고, 직접 컴포넌트 간 임시 상태로 우회하지 않습니다.
 
-## 핵심 아키텍처 패턴
+### 2. 현재 진입점
 
-### React ↔ GameLoop 분리 원칙
+- 메뉴/씬 제어: `src/App.tsx`
+- 메인 루프: `src/game/GameLoop.ts`
+- 렌더링: `src/game/canvas/CanvasRenderer.ts`
+- 메타 저장: `src/store/metaProgressionStore.ts`
+- 레벨업 카드 정의: `src/store/upgradeStore.ts`
+- 적 스폰/기본 밸런스: `src/game/EnemySpawner.ts`
 
-| 영역 | 담당 | 주의 |
-|------|------|------|
-| 메뉴·HUD·모달 UI | React 컴포넌트 (`App.tsx`, `components/`) | React 상태 사용 가능 |
-| 실시간 게임 로직 | `GameLoop` 및 하위 클래스 | `useXxxStore.getState()` 로 직접 읽기/쓰기 |
-| 씬 전환 트리거 | `GameLoop`가 감지 → `gameStore.setCurrentScene()` | React는 씬 값 구독만 함 |
+## 현재 사용자 기준 핵심 기능
 
-**중요:** React 컴포넌트 안에서 GameLoop 내부 상태를 직접 조작하지 마세요.  
-`App.tsx`가 `gameLoopRef.current?.start()` / `stop()` / `reset()` 만 호출합니다.
+- 메인 메뉴 배경에 폐허 도시 비주얼 사용
+- 스토리 선택 화면에서 `PROLOGUE`, `1-1`, `1-2`, `1-3` 선택 가능
+- 프롤로그는 스토리만 보고 종료되며 첫 완료 시 500 골드 지급
+- 각 스테이지는 스토리 대화 후 게임 시작
+- 설정에서 볼륨, 언어, 해금된 배속 선택 가능
+- 상점에서 배속 업그레이드 구매 가능
+- 일시정지 화면에서도 설정 패널 사용
+- 중간보스 다수 등장 가능, 각 개체 체력바 표시
+- 최종보스는 별도 패턴과 상단 전용 체력바 사용
 
----
+## 저장 데이터 주의점
 
-## 씬(Scene) 흐름
+`src/store/metaProgressionStore.ts`는 아래 성격의 데이터를 저장합니다.
 
-```
-menu
- └─(startGame)──→ playing
-                    ├─(ESC)──────────→ paused ──(ESC / resume)──→ playing
-                    ├─(레벨업 감지)──→ levelUp ──(업그레이드 선택)──→ playing
-                    ├─(HP=0)─────────→ gameover
-                    └─(최종보스 처치)→ stageClear
-```
+- 골드
+- 언어 설정
+- 배속 해금/선택 상태
+- 프롤로그 초회 보상 지급 여부
+- 클리어한 스테이지 목록
+- 기타 메타 진행 관련 값
 
-- `GameScene` 타입: `'menu' | 'playing' | 'paused' | 'levelUp' | 'gameover' | 'story' | 'stageClear'`
-- `GameLoop.update()`는 `currentScene !== 'playing'` 이면 조기 리턴합니다.
+이 스토어 구조를 바꿀 때는 아래를 같이 확인합니다.
 
----
+- `INITIAL_STATE`
+- `loadFromLocalStorage()`의 마이그레이션 처리
+- `saveToLocalStorage()` 직렬화 항목
+- 설정 초기화 동작
 
-## Zustand 스토어 API 요약
+## 자주 수정되는 위치
 
-### gameStore
-| 상태/액션 | 타입 | 설명 |
-|-----------|------|------|
-| `currentScene` | `GameScene` | 현재 씬 |
-| `gameTime` | `number` | 경과 초 |
-| `killCount` | `number` | 킬 수 |
-| `finalBossSpawned / Defeated` | `boolean` | 최종보스 플래그 |
-| `miniBossCount` | `number` | 중간보스 소환 횟수(최대 3) |
-| `resetGameStats()` | — | 게임 통계 초기화 |
+### 게임 감각 / 밸런스
 
-### playerStore
-| 상태/액션 | 설명 |
-|-----------|------|
-| `player` | `Player` 객체 전체 |
-| `tryDash(dirX, dirY)` | 대시 시도 (쿨다운 체크 포함) |
-| `tickDash(dt)` | 대시 타이머 감소 (GameLoop에서 매 프레임 호출) |
-| `addPlayerExp(exp)` | 경험치 추가 + 레벨업 자동 처리 |
-| `updateStats(partial)` | 플레이어 스탯 일부 덮어쓰기 |
-| `resetPlayer()` | 초기 상태로 복원 |
+- 플레이어 기본값: `src/config/gameConfig.ts`
+- 적 기본 스탯/스폰 증가율: `src/game/EnemySpawner.ts`
+- 보스/중간보스 행동 템포: `src/game/GameLoop.ts`
+- 레벨업 카드 수치: `src/store/upgradeStore.ts`
+- 레벨업 적용 방식: `src/components/LevelUpScreen.tsx`
 
-### enemyStore
-| 액션 | 설명 |
-|------|------|
-| `updateEnemies(list)` | 전체 적 배열 교체 (매 프레임) |
-| `removeEnemyById(id)` | 특정 적 제거 |
-| `resetEnemies()` | 전체 초기화 |
+### UI / 흐름
 
-### upgradeStore
-- `DEFAULT_UPGRADES`: 6가지 고정 업그레이드 (damage/speed/attackSpeed/health/projectileSpeed/weapon)
-- `getRandomUpgrades(n)`: 중복 없이 n개 무작위 추출
-- `applyUpgrade(u)`: `activeUpgrades`에 추가 (실제 스탯 변경은 `LevelUpScreen`이 담당)
+- 메뉴, 상점, 설정, 스토리, `Esc` 동작: `src/App.tsx`
+- 설정 패널 내용: `src/components/SettingsPanel.tsx`
+- 스테이지 클리어 결과 UI: `src/components/StageClearScreen.tsx`
+- 스토리 대화 UI: `src/components/StoryDialogScreen.tsx`
 
----
+### 캔버스 표현
 
-## 적(Enemy) 시스템
+- HUD, 조준점, 플레이어/적 렌더링: `src/game/canvas/CanvasRenderer.ts`
 
-### 적 타입별 특성
-| 타입 | HP 배율 | 공격력 배율 | 속도 배율 | 특이사항 |
-|------|---------|------------|---------|---------|
-| `basic` | 1.0× | 1.0× | 1.05× | 기본 근접 |
-| `fast` | 0.7× | 0.8× | 1.7× | 고속 돌진 |
-| `tank` | 1.8× | 1.2× | 0.675× | 고체력 저속 |
-| `shooter` | 0.9× | 0.9× | 0.85× | 원거리 투사체, 사거리 520 |
+## 입력 규칙
 
-- **difficultyMultiplier** = `0.6 + gameTime / 30` (0초=0.6배, 60초=2.6배, 180초=6.6배)
-- **최대 일반 적 동시 존재**: `MAX_NORMAL_ENEMIES = 80`
-- **중간보스(Mini Boss)**: 50초마다 1회, 최대 3회 소환. `MINI_BOSS_LEAP_SPEED = 720`
-- **최종보스(Final Boss)**: `gameTime >= 180`초(3분)에 1회 소환. 도지 AI 탑재.
-  - 도지 범위: 180px, 속도: 620, 지속시간: 0.28s, 쿨다운: 1.6s
+- 이동: 키보드 우선, 필요 시 조이스틱 대체
+- 공격: 마우스 좌클릭
+- 대시: Space 또는 UI 버튼
+- `Esc`:
+  - 플레이 중: 일시정지
+  - 일시정지 중: 재개
+  - 메뉴의 설정/상점/스토리: 메인 메뉴 복귀
+- `D`: 디버그 오버레이 토글
 
-### 스폰 파라미터
-```
-초기 spawnRate: 1.2 /초
-최대 spawnRate: 7.0 /초
-증가율: 분당 +1.4
-웨이브 사이즈: 1 + floor(gameTime / 20), 최대 6
-```
+## 문서화 원칙
 
----
+이 파일에는 아래만 남깁니다.
 
-## 전투 시스템
+- 새로운 AI가 실수하기 쉬운 구조적 정보
+- 저장 데이터/씬 흐름처럼 망가지면 복구 비용이 큰 정보
+- 최근에 바뀐 중요한 기능 요약
 
-### 플레이어 공격 (AutoAttack)
-- **자동 공격**: 탐지 범위(400px) 내 가장 가까운 적을 자동 조준
-- **마우스 공격**: 좌클릭 시 마우스 방향으로 발사 (자동 공격보다 우선)
-- **다중 발사체**: `projectileCount`(1~5발), spread각도 0.25rad (2발일 때 0.15rad)
-- `attackCooldown = 1 / player.attackSpeed`
+반대로 아래는 길게 적지 않습니다.
 
-### 투사체 공통
-- `GLOBAL_PROJECTILE_SPEED_SCALE = 0.7` (플레이어·적 공통 적용)
-- `maxLifetime = 10초`, 캔버스 경계 ±50px 벗어나면 제거
+- 자주 바뀌는 세부 밸런스 숫자 전부
+- 코드만 보면 바로 알 수 있는 단순 설명
+- 과거 상태를 그대로 보존한 오래된 로그 나열
 
-### 대시
-- Space 키 또는 `tryDash()` 호출
-- 쿨다운: `dashCooldownMs = 1500ms`
-- 지속시간: `dashDuration = 0.18s`, 속도: `dashSpeed = 900`
+## 작업 후 최소 확인
 
----
-
-## 입력 시스템
-
-| 입력 | 파일 | 우선순위 |
-|------|------|---------|
-| 키보드 (WASD / ↑↓←→) | `KeyboardInput.ts` | 1순위 |
-| 터치 조이스틱 | `JoystickInput.ts` | 2순위 (키보드 없을 때) |
-| 마우스 클릭 (공격) | `MouseInput.ts` | 좌클릭만 감지 |
-| Space | `GameLoop.setupEventListeners` | 대시 트리거 |
-| Escape | `App.tsx handleKeyDown` | pause/resume |
-| D 키 | `CanvasRenderer.setupDebugToggle` | 디버그 overlay 토글 |
-
----
-
-## 캔버스 & 렌더링
-
-- **해상도**: `1920 × 1080` (DPR 적용으로 Retina 대응)
-- **배경**: `#1a1a2e` + 플레이어 위치 스크롤 격자 (80px 간격)
-- **적 렌더링**: 타입별 도형 (basic=사각형, fast=삼각형, tank=육각형, shooter=오각형, boss=12각형 회전 문양)
-
----
-
-## 게임 밸런스 핵심 파라미터 (수정 포인트)
-
-| 변경 목적 | 파일 | 위치 |
-|-----------|------|------|
-| 플레이어 초기 스탯 | `src/config/gameConfig.ts` | `GAME_CONFIG.player` |
-| 경험치 증가 곡선 | `src/config/gameConfig.ts` | `EXP_CONFIG`, `getExpMultiplier()` |
-| 적 타입별 스탯 | `src/game/EnemySpawner.ts` | `getEnemyStats()` |
-| 적 스폰 속도/웨이브 | `src/game/EnemySpawner.ts` | `updateDifficulty()` |
-| 레벨업 업그레이드 목록 | `src/store/upgradeStore.ts` | `DEFAULT_UPGRADES` |
-| 업그레이드 효과 적용 | `src/components/LevelUpScreen.tsx` | `applyUpgrade()` |
-| 최종보스 스폰 타이밍 | `src/game/GameLoop.ts` | `FINAL_BOSS_SPAWN_TIME` |
-| 대시 수치 | `src/store/playerStore.ts` | `INITIAL_PLAYER` 의 dash 필드들 |
-
----
-
-## 개발 워크플로
-
-```bash
-npm install      # 의존성 설치
-npm run dev      # Vite 개발 서버 (http://localhost:5173)
-npm run build    # TypeScript 체크 + Vite 빌드
-npm run preview  # 빌드 결과 미리보기
-```
-
----
-
-## 디버깅 팁
-
-- **`D` 키**: 캔버스 디버그 overlay 토글 (FPS, 적 수, 투사체 수, 플레이어 좌표 등)
-- **브라우저 콘솔에서 스토어 직접 접근**:
-  ```js
-  // 예시: 플레이어 HP 강제 변경
+- 로직/UI를 건드렸으면 가능하면 `npm run build`
+- 저장 구조를 바꿨으면 `metaProgressionStore.ts`의 load/save 둘 다 확인
+- 메뉴 흐름을 바꿨으면 `Esc`, 상점, 설정, 스토리, 일시정지까지 직접 흐름 점검
   usePlayerStore.getState().setPlayerHP(999)
   // 예시: 씬 전환
   useGameStore.getState().setCurrentScene('levelUp')
