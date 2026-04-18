@@ -180,6 +180,17 @@ export class EnemySpawner {
     return this.miniBossCount
   }
 
+  // ── 개발자 모드: 시간 동기화 ─────────────────────────────
+  devSyncTime(gameTimeSeconds: number): void {
+    this.gameTime = gameTimeSeconds
+    // 이미 스폰됐어야 할 중간보스 수 계산 (50초마다 1회, 최대 3회)
+    this.miniBossCount = Math.min(Math.floor(gameTimeSeconds / 50), this.maxMiniBoss)
+    // miniBossTimer를 현재 50초 사이클 내 위치로 맞춤
+    this.miniBossTimer = gameTimeSeconds % 50
+    // 난이도 관련 파라미터 재계산
+    this.updateDifficulty()
+  }
+
   reset(): void {
     this.spawnRate = 1.2
     this.timeSinceLastSpawn = 0

@@ -82,7 +82,7 @@ function App() {
 
   // ── 개발자 모드: 시간 조작 (프로덕션에서 제거 가능) ──────
   const devSetGameTime = (seconds: number) => {
-    useGameStore.getState().setGameTime(seconds)
+    gameLoopRef.current?.devSyncTime(seconds)
   }
 
   return (

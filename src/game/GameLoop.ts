@@ -11,6 +11,10 @@ import { EnemyProjectileSystem } from './EnemyProjectile'
 
 // ── 최종보스 상수 ────────────────────────────────────────────
 const FINAL_BOSS_SPAWN_TIME = 180   // 3분 (초)
+const FINAL_BOSS_DODGE_RANGE = 180  // 탄환 감지 범위
+const FINAL_BOSS_DODGE_SPEED = 620  // 회피 대시 속도
+const FINAL_BOSS_DODGE_DURATION = 0.28 // 대시 지속 시간
+const FINAL_BOSS_DODGE_COOLDOWN = 1.6  // 대시 쿨다운
 
 // 동시에 유지할 일반 적 최대 수 (보스 제외)
 const MAX_NORMAL_ENEMIES = 80
@@ -207,43 +211,108 @@ export class GameLoop {
       const isBossEnemy = (enemy as any).id?.startsWith('boss_')
       const isFinalBossEnemy = (enemy as any).isFinalBoss === true
 
-      // ── 최종보스 행동: 패턴 시스템 ──────────────────────────
+      // ── 최종보스 행동: 회피 + 패턴 쿨다운 + 패턴 실행 ───────
       if (isFinalBossEnemy) {
-        // 초기화
-        if (!(enemy as any).bossPattern) {
-          ;(enemy as any).bossPattern = this.selectBossPattern()
-          ;(enemy as any).patternTimer = 0
-          ;(enemy as any).patternPhase = 'start'
+        const fb = enemy as any
+
+        // ── 초기화 ──────────────────────────────────────────
+        if (!fb.fbInitialized) {
+          fb.fbInitialized = true
+          fb.bossPattern = this.selectBossPattern()
+          fb.patternTimer = 0
+          fb.patternPhase = 'start'
+          fb.inPatternCooldown = false
+          fb.patternCooldownTimer = 0
+          fb.fbDodgeCd = 0
+          fb.fbDodging = false
+          fb.fbDodgeTimer = 0
+          fb.fbDodgeVel = { x: 0, y: 0 }
         }
 
-        const currentPattern = (enemy as any).bossPattern
-
-        // 패턴 업데이트
-        if (currentPattern === 1) {
-          this.updateBossPattern1(enemy, player, deltaTime)
-        } else if (currentPattern === 2) {
-          this.updateBossPattern2(enemy, deltaTime)
-        } else if (currentPattern === 3) {
-          this.updateBossPattern3(enemy, player, deltaTime)
-        }
-
-        // 패턴 종료 시 다음 패턴으로
-        if (this.isPatternFinished(enemy)) {
-          ;(enemy as any).bossPattern = this.selectBossPattern()
-          ;(enemy as any).patternTimer = 0
-          ;(enemy as any).patternPhase = 'start'
-        }
-
-        // 무적이 아닐 때만 플레이어 쪽으로 이동
-        if (!(enemy as any).invulnerable && (enemy as any).patternPhase !== 'active') {
-          const dx = player.x - enemy.x
-          const dy = player.y - enemy.y
-          const dist = Math.hypot(dx, dy) || 1
-          enemy.velocity.x = (dx / dist) * enemy.moveSpeed
-          enemy.velocity.y = (dy / dist) * enemy.moveSpeed
+        // ── 패턴 쿨다운 또는 패턴 실행 ─────────────────────
+        if (fb.inPatternCooldown) {
+          fb.patternCooldownTimer -= deltaTime
+          if (fb.patternCooldownTimer <= 0) {
+            fb.inPatternCooldown = false
+            fb.bossPattern = this.selectBossPattern()
+            fb.patternTimer = 0
+            fb.patternPhase = 'start'
+          }
         } else {
-          enemy.velocity.x = 0
-          enemy.velocity.y = 0
+          const cp: number = fb.bossPattern
+          if (cp === 1) this.updateBossPattern1(enemy, player, deltaTime)
+          else if (cp === 2) this.updateBossPattern2(enemy, deltaTime)
+          else if (cp === 3) this.updateBossPattern3(enemy, player, deltaTime)
+
+          if (this.isPatternFinished(enemy)) {
+            // 패턴 1: 3초 쿨다운, 패턴 2/3: 5초 쿨다운
+            fb.inPatternCooldown = true
+            fb.patternCooldownTimer = cp === 1 ? 3.0 : 5.0
+          }
+        }
+
+        // ── 회피 대시 (탄환 회피 기믹 유지) ────────────────
+        // 패턴 2 active(막 생성 중) / 패턴 3 centralizing·active(무적 발사 중)는 제외
+        const dodgeAllowed =
+          !fb.invulnerable &&
+          !(fb.bossPattern === 2 && fb.patternPhase === 'active') &&
+          !(fb.bossPattern === 3 && (fb.patternPhase === 'centralizing' || fb.patternPhase === 'active'))
+
+        if (dodgeAllowed) {
+          if (fb.fbDodgeCd > 0) fb.fbDodgeCd -= deltaTime
+
+          if (!fb.fbDodging && fb.fbDodgeCd <= 0) {
+            for (const proj of this.autoAttack.getProjectiles()) {
+              const dist = Math.hypot(proj.x - enemy.x, proj.y - enemy.y)
+              if (dist < FINAL_BOSS_DODGE_RANGE) {
+                const toPx = player.x - enemy.x
+                const toPy = player.y - enemy.y
+                const len = Math.hypot(toPx, toPy) || 1
+                const sign = Math.random() < 0.5 ? 1 : -1
+                fb.fbDodgeVel = {
+                  x: (-toPy / len) * sign * FINAL_BOSS_DODGE_SPEED,
+                  y: (toPx / len) * sign * FINAL_BOSS_DODGE_SPEED,
+                }
+                fb.fbDodging = true
+                fb.fbDodgeTimer = 0
+                fb.fbDodgeCd = FINAL_BOSS_DODGE_COOLDOWN
+                break
+              }
+            }
+          }
+
+          if (fb.fbDodging) {
+            fb.fbDodgeTimer += deltaTime
+            enemy.velocity.x = fb.fbDodgeVel.x
+            enemy.velocity.y = fb.fbDodgeVel.y
+            if (fb.fbDodgeTimer >= FINAL_BOSS_DODGE_DURATION) {
+              fb.fbDodging = false
+              enemy.velocity.x = 0
+              enemy.velocity.y = 0
+            }
+          }
+        }
+
+        // ── 이동 (대시 중이 아닌 경우) ──────────────────────
+        if (!fb.fbDodging) {
+          const isStationary =
+            fb.invulnerable ||
+            (fb.bossPattern === 2 && fb.patternPhase === 'active') ||
+            (fb.bossPattern === 3 && fb.patternPhase === 'active')
+          const isCentralizing =
+            fb.bossPattern === 3 && fb.patternPhase === 'centralizing'
+
+          if (isStationary || isCentralizing) {
+            // centralizing은 updateBossPattern3에서 직접 위치를 설정하므로 velocity만 0으로
+            enemy.velocity.x = 0
+            enemy.velocity.y = 0
+          } else {
+            const dx = player.x - enemy.x
+            const dy = player.y - enemy.y
+            const dist = Math.hypot(dx, dy) || 1
+            enemy.velocity.x = (dx / dist) * enemy.moveSpeed
+            enemy.velocity.y = (dy / dist) * enemy.moveSpeed
+          }
         }
       }
       // ── 중간보스 행동: 도약 + 2단 탄막 ──────────────────
@@ -417,12 +486,14 @@ export class GameLoop {
   }
 
   private updateBossPattern1(boss: any, player: Player, deltaTime: number) {
-    // 패턴 1: 밝기 변화 → 0.5초 뒤 순간이동 → 12방향 방사형 탄환
-    const PHASE_BRIGHTNESS = 0.3
-    const PHASE_TELEPORT = 1.2
-    const PHASE_SHOOT = 1.8
+    // 패턴 1: 0~0.5s 밝기 증가 → 0.5s 원점대칭 순간이동 → 0.8s 12방향 방사형 탄환 → 2s 종료
+    const TELEPORT_AT = 0.5
+    const SHOOT_AT = 0.8
+    const END_AT = 2.0
 
     if (boss.patternPhase === 'start') {
+      boss.p1TeleportDone = false
+      boss.p1ShootDone = false
       boss.patternBrightness = 0
       boss.patternTimer = 0
       boss.patternPhase = 'active'
@@ -431,42 +502,36 @@ export class GameLoop {
     boss.patternTimer += deltaTime
 
     if (boss.patternPhase === 'active') {
-      // 밝기 변화 (0~0.3초)
-      if (boss.patternTimer < PHASE_BRIGHTNESS) {
-        boss.patternBrightness = boss.patternTimer / PHASE_BRIGHTNESS
-      }
-      // 순간이동 (0.3~0.8초)
-      else if (boss.patternTimer < PHASE_TELEPORT) {
-        boss.patternBrightness = 1.0
-        if (boss.patternTimer < PHASE_TELEPORT && boss.patternTimer - deltaTime < PHASE_TELEPORT) {
-          // 순간이동 실행 (0.5초 타이밍)
-          if (Math.abs(boss.patternTimer - 0.8) < deltaTime) {
-            const dist = Math.hypot(boss.x - player.x, boss.y - player.y)
-            const angle = Math.atan2(boss.y - player.y, boss.x - player.x)
-            boss.x = player.x + Math.cos(angle) * dist
-            boss.y = player.y + Math.sin(angle) * dist
-          }
-        }
-      }
-      // 탄환 발사 (0.8~1.8초)
-      else if (boss.patternTimer < PHASE_SHOOT) {
+      // 밝기: 0→1로 선형 증가 (0~TELEPORT_AT 구간)
+      if (boss.patternTimer < TELEPORT_AT) {
+        boss.patternBrightness = boss.patternTimer / TELEPORT_AT
+      } else {
         boss.patternBrightness = 0
-        if (boss.patternTimer - deltaTime < 0.85 && boss.patternTimer >= 0.85) {
-          // 12방향 방사형 발사
-          for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2
-            this.enemyProjectileSystem.createProjectile(
-              boss.x, boss.y,
-              boss.x + Math.cos(angle) * 150,
-              boss.y + Math.sin(angle) * 150,
-              boss.attackPower,
-              boss.projectileSpeed || 460
-            )
-          }
+      }
+
+      // 순간이동: 플레이어 기준 원점대칭 (한 번만 실행)
+      if (!boss.p1TeleportDone && boss.patternTimer >= TELEPORT_AT) {
+        boss.p1TeleportDone = true
+        boss.x = 2 * player.x - boss.x
+        boss.y = 2 * player.y - boss.y
+      }
+
+      // 12방향 방사형 탄환 발사 (한 번만 실행)
+      if (!boss.p1ShootDone && boss.patternTimer >= SHOOT_AT) {
+        boss.p1ShootDone = true
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2
+          this.enemyProjectileSystem.createProjectile(
+            boss.x, boss.y,
+            boss.x + Math.cos(angle) * 150,
+            boss.y + Math.sin(angle) * 150,
+            boss.attackPower,
+            boss.projectileSpeed || 460
+          )
         }
       }
-      // 패턴 종료
-      else {
+
+      if (boss.patternTimer >= END_AT) {
         boss.patternPhase = 'end'
       }
     }
@@ -509,61 +574,63 @@ export class GameLoop {
   }
 
   private updateBossPattern3(boss: any, _player: Player, deltaTime: number) {
-    // 패턴 3: 무적 → 중앙 이동 → 12면 중 8면에서 초당 5번씩 10초간 발사
+    // 패턴 3: 무적 → 중앙 이동(0.5s) → 12면 중 8면 초당 5번 10초간 발사
     const CENTRALIZE_DURATION = 0.5
     const SHOOT_DURATION = 10.0
-    const SHOOT_RATE = 5 // 초당 발사 횟수
-    const SAFE_SIDES = 8 // 12면 중 8면
+    const SHOOT_RATE = 5
 
     if (boss.patternPhase === 'start') {
       boss.invulnerable = true
       boss.centralizeTimer = 0
       boss.patternTimer = 0
+      boss.p3ShootTimer = 0
+      // 시작 위치 저장 (매 프레임 갱신되면 안 됨)
+      boss.centralizeStartX = boss.x
+      boss.centralizeStartY = boss.y
       boss.patternPhase = 'centralizing'
       // 12면 중 8개 랜덤 선택
-      const allSides = Array.from({ length: 12 }, (_, i) => i)
-      const safeSides = []
-      for (let i = 0; i < SAFE_SIDES; i++) {
+      const allSides = Array.from({ length: 12 }, (_v, i) => i)
+      const pickedSides: number[] = []
+      for (let i = 0; i < 8; i++) {
         const idx = Math.floor(Math.random() * allSides.length)
-        safeSides.push(allSides[idx])
+        pickedSides.push(allSides[idx])
         allSides.splice(idx, 1)
       }
-      boss.safeSides = safeSides
+      boss.activeSides = pickedSides
     }
 
     if (boss.patternPhase === 'centralizing') {
       boss.centralizeTimer += deltaTime
       const progress = Math.min(1, boss.centralizeTimer / CENTRALIZE_DURATION)
-      // 보스 원래 위치에서 중앙으로 이동 (중앙 = 960, 540)
       const centerX = 960
       const centerY = 540
-      const startX = boss.x
-      const startY = boss.y
-      boss.x = startX + (centerX - startX) * progress
-      boss.y = startY + (centerY - startY) * progress
+      // 저장한 시작 위치에서 중앙으로 선형 이동
+      boss.x = boss.centralizeStartX + (centerX - boss.centralizeStartX) * progress
+      boss.y = boss.centralizeStartY + (centerY - boss.centralizeStartY) * progress
+      boss.velocity = { x: 0, y: 0 }
 
       if (progress >= 1) {
+        boss.x = centerX
+        boss.y = centerY
         boss.patternTimer = 0
+        boss.p3ShootTimer = 0
         boss.patternPhase = 'active'
       }
     } else if (boss.patternPhase === 'active') {
       boss.patternTimer += deltaTime
+      boss.p3ShootTimer += deltaTime
+      boss.velocity = { x: 0, y: 0 }
 
-      // 초당 5번 발사 로직
       const shotInterval = 1.0 / SHOOT_RATE
-      const currentShot = Math.floor(boss.patternTimer / shotInterval)
-      const nextShotTime = (currentShot + 1) * shotInterval
-
-      if (Math.abs(boss.patternTimer - nextShotTime) < deltaTime) {
-        // 12면 중 8개 면에서만 발사 (랜덤)
-        const sideIdx = Math.floor(Math.random() * boss.safeSides.length)
-        const selectedSide = boss.safeSides[sideIdx]
-
-        // 해당 면에서 방사형 발사 (8방향)
+      if (boss.p3ShootTimer >= shotInterval) {
+        boss.p3ShootTimer -= shotInterval
+        // 활성화된 면 중 매 발사마다 랜덤 1개 선택
+        const sideIdx = Math.floor(Math.random() * boss.activeSides.length)
+        const selectedSide = boss.activeSides[sideIdx]
         const baseSideAngle = (selectedSide / 12) * Math.PI * 2
+        // 해당 면 기준 8방향 방사형
         for (let i = 0; i < 8; i++) {
-          const angleOffset = (i / 8) * Math.PI * 2
-          const angle = baseSideAngle + angleOffset
+          const angle = baseSideAngle + (i / 8) * Math.PI * 2
           this.enemyProjectileSystem.createProjectile(
             boss.x, boss.y,
             boss.x + Math.cos(angle) * 150,
@@ -574,7 +641,6 @@ export class GameLoop {
         }
       }
 
-      // 10초 후 패턴 종료
       if (boss.patternTimer >= SHOOT_DURATION) {
         boss.invulnerable = false
         boss.patternPhase = 'end'
@@ -743,6 +809,22 @@ export class GameLoop {
 
   public getCanvasSize() {
     return this.renderer.getCanvasSize()
+  }
+
+  // ── 개발자 모드: 시간 점프 ────────────────────────────────
+  // DEV_MODE 전용 – 삭제하려면 이 메서드와 App.tsx의 devSetGameTime 호출만 제거
+  public devSyncTime(seconds: number) {
+    useGameStore.getState().setGameTime(seconds)
+    this.enemySpawner.devSyncTime(seconds)
+    // 최종보스 스폰 플래그 동기화
+    if (seconds >= FINAL_BOSS_SPAWN_TIME) {
+      this.finalBossSpawned = true
+      useGameStore.getState().setFinalBossSpawned(true)
+    } else {
+      this.finalBossSpawned = false
+      useGameStore.getState().setFinalBossSpawned(false)
+      useGameStore.getState().setFinalBossDefeated(false)
+    }
   }
 
   public destroy() {
