@@ -7,9 +7,11 @@ import { useMetaProgressionStore } from './store/metaProgressionStore'
 import LevelUpScreen from './components/LevelUpScreen'
 import StageClearScreen from './components/StageClearScreen'
 import RuinedCityBackground from './components/RuinedCityBackground'
+import StoryDialogScreen from './components/StoryDialogScreen'
+import { StageId, STAGE_STORY_MAP } from './config/storyDialogs'
 
 // ── 메뉴 서브페이지 타입 ─────────────────────────────────────
-type MenuPage = 'main' | 'story' | 'prologue' | 'shop' | 'options'
+type MenuPage = 'main' | 'story' | 'shop' | 'options'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -17,6 +19,7 @@ function App() {
   const gameStore = useGameStore()
   const metaStore = useMetaProgressionStore()
   const [menuPage, setMenuPage] = useState<MenuPage>('main')
+  const [selectedStage, setSelectedStage] = useState<StageId | null>(null)
 
   useEffect(() => {
     useMetaProgressionStore.getState().loadFromLocalStorage()
@@ -59,6 +62,7 @@ function App() {
     useGameStore.getState().setCurrentScene('menu')
     gameLoopRef.current?.stop()
     setMenuPage('main')
+    setSelectedStage(null)
   }
 
   const continueGame = () => {
@@ -160,12 +164,15 @@ function App() {
       {gameStore.currentScene === 'menu' && menuPage === 'story' && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
           <RuinedCityBackground />
-          <div className="w-full max-w-xl">
+          <div className="w-full max-w-4xl">
             {/* 헤더 */}
             <div className="flex items-center mb-8">
               <button
                 className="mr-4 text-slate-400 hover:text-white transition text-2xl"
-                onClick={() => setMenuPage('main')}
+                onClick={() => {
+                  setSelectedStage(null)
+                  setMenuPage('main')
+                }}
               >
                 ←
               </button>
@@ -178,71 +185,52 @@ function App() {
             </div>
 
             {/* 스테이지 목록 */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* 1-1 해금 */}
-              <button
-                className="group relative bg-slate-800 border-2 border-cyan-500 rounded-xl p-5 text-center hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/20 transition"
-                onClick={() => setMenuPage('prologue')}
-              >
-                <div className="text-2xl font-black text-cyan-400 group-hover:text-cyan-200 transition">1-1</div>
-                <div className="text-xs text-slate-400 mt-1">전초기지</div>
-                <div className="mt-2 text-xs text-cyan-600">▶ 시작</div>
-              </button>
-
-              {/* 1-2 잠금 */}
-              {[2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="bg-slate-900 border-2 border-slate-700 rounded-xl p-5 text-center opacity-50 cursor-not-allowed"
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(
+                [
+                  { id: 'prologue', label: 'PROLOGUE', subtitle: '잔해의 도시', accent: 'amber' },
+                  { id: '1-1', label: '1-1', subtitle: '전초기지', accent: 'cyan' },
+                  { id: '1-2', label: '1-2', subtitle: '붕괴 고속도로', accent: 'violet' },
+                  { id: '1-3', label: '1-3', subtitle: '침묵의 코어', accent: 'emerald' },
+                ] as Array<{ id: StageId; label: string; subtitle: string; accent: 'amber' | 'cyan' | 'violet' | 'emerald' }>
+              ).map((stage) => (
+                <button
+                  key={stage.id}
+                  className={`group relative rounded-xl p-5 text-center border-2 transition shadow-lg bg-slate-900/90 ${
+                    stage.accent === 'amber'
+                      ? 'border-amber-500/70 hover:border-amber-300 hover:shadow-amber-500/20'
+                      : stage.accent === 'cyan'
+                        ? 'border-cyan-500/70 hover:border-cyan-300 hover:shadow-cyan-500/20'
+                        : stage.accent === 'violet'
+                          ? 'border-violet-500/70 hover:border-violet-300 hover:shadow-violet-500/20'
+                          : 'border-emerald-500/70 hover:border-emerald-300 hover:shadow-emerald-500/20'
+                  }`}
+                  onClick={() => setSelectedStage(stage.id)}
                 >
-                  <div className="text-2xl font-black text-slate-600">1-{n}</div>
-                  <div className="text-xs text-slate-600 mt-1">잠금</div>
-                  <div className="mt-2 text-xs text-slate-700">🔒</div>
-                </div>
+                  <div className="text-2xl font-black text-white group-hover:text-slate-100 transition">{stage.label}</div>
+                  <div className="text-xs text-slate-400 mt-1">{stage.subtitle}</div>
+                  <div className="mt-2 text-xs text-slate-300">스토리 보기 ▶</div>
+                </button>
               ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 프롤로그 ─────────────────────────────────────────── */}
-      {gameStore.currentScene === 'menu' && menuPage === 'prologue' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
+      {/* ── 스토리 대화창 ───────────────────────────────────── */}
+      {gameStore.currentScene === 'menu' && menuPage === 'story' && selectedStage && (
+        <div className="absolute inset-0 z-40">
           <RuinedCityBackground />
-          <div className="w-full max-w-xl text-center">
-            <div className="flex items-center mb-10">
-              <button
-                className="mr-4 text-slate-400 hover:text-white transition text-2xl"
-                onClick={() => setMenuPage('story')}
-              >←</button>
-              <h2 className="text-3xl font-bold text-white tracking-widest">PROLOGUE</h2>
-            </div>
-
-            <div className="mb-10 rounded-xl border border-slate-700 bg-slate-900/80 px-8 py-10 text-center">
-              <div className="text-6xl mb-6 opacity-60">🌆</div>
-              <p className="text-slate-400 text-lg leading-relaxed mb-2">
-                도시는 폐허가 되었다.
-              </p>
-              <p className="text-slate-500 text-sm leading-loose">
-                — 스토리 준비 중 —
-              </p>
-            </div>
-
-            <div className="flex gap-4 justify-center">
-              <button
-                className="rounded-full bg-slate-700 border border-slate-500 px-8 py-3 font-bold text-white hover:bg-slate-600 transition"
-                onClick={() => setMenuPage('story')}
-              >
-                ← 뒤로
-              </button>
-              <button
-                className="rounded-full bg-cyan-500 px-10 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/30 hover:bg-cyan-400 transition"
-                onClick={startGame}
-              >
-                1-1 시작 ▶
-              </button>
-            </div>
-          </div>
+          <StoryDialogScreen
+            stageTitle={STAGE_STORY_MAP[selectedStage].title}
+            stageSubtitle={STAGE_STORY_MAP[selectedStage].subtitle}
+            lines={STAGE_STORY_MAP[selectedStage].lines}
+            onBack={() => setSelectedStage(null)}
+            onComplete={() => {
+              setSelectedStage(null)
+              startGame()
+            }}
+          />
         </div>
       )}
 
