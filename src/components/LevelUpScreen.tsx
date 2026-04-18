@@ -12,7 +12,12 @@ export default function LevelUpScreen() {
     // pick a slightly larger pool then filter out weapon upgrade if player already at max
     const pool = upgradeStore.getRandomUpgrades(6)
     const playerProj = playerStore.player.projectileCount || 1
-    const filtered = pool.filter((u) => !(u.type === 'weapon' && playerProj >= 5))
+    const piercingLevel = playerStore.player.piercingLevel || 0
+    const filtered = pool.filter((u) => {
+      if (u.type === 'weapon' && playerProj >= 5) return false
+      if (u.type === 'piercing' && piercingLevel >= 3) return false
+      return true
+    })
     return filtered.slice(0, 3)
   })
 
@@ -60,6 +65,11 @@ export default function LevelUpScreen() {
           projectileCount: Math.min(5, currentCount + 1),
         })
         break
+      case 'piercing':
+        playerStore.updateStats({
+          piercingLevel: Math.min(3, (player.piercingLevel || 0) + 1),
+        })
+        break
     }
   }
 
@@ -94,6 +104,10 @@ export default function LevelUpScreen() {
                   {upgrade.type === 'weapon' ? (
                     <span className="text-cyan-400 font-semibold">
                       +1발 ({(playerStore.player.projectileCount || 1)}/5)
+                    </span>
+                  ) : upgrade.type === 'piercing' ? (
+                    <span className="text-cyan-400 font-semibold">
+                      관통 ({playerStore.player.piercingLevel || 0}/3)
                     </span>
                   ) : upgrade.type === 'health' ? (
                     <span className="text-cyan-400 font-semibold">

@@ -48,6 +48,7 @@ export class AutoAttack {
     const baseAngle = Math.atan2(target.y - player.y, target.x - player.x)
     const spread = count === 2 ? 0.15 : 0.25 // narrower spread for the first two-shot upgrade
     const speed = player.projectileSpeed || 600
+    const piercing = player.piercingLevel || 0
 
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1)
@@ -63,7 +64,8 @@ export class AutoAttack {
         tx + vx,
         ty + vy,
         player.attackPower,
-        speed
+        speed,
+        piercing
       )
     }
   }
@@ -73,6 +75,7 @@ export class AutoAttack {
     const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x)
     const spread = count === 2 ? 0.15 : 0.25
     const speed = player.projectileSpeed || 600
+    const piercing = player.piercingLevel || 0
 
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1)
@@ -88,7 +91,8 @@ export class AutoAttack {
         tx + vx,
         ty + vy,
         player.attackPower,
-        speed
+        speed,
+        piercing
       )
     }
   }

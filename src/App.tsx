@@ -3,19 +3,24 @@ import { GameLoop } from './game/GameLoop'
 import { useGameStore } from './store/gameStore'
 import { usePlayerStore } from './store/playerStore'
 import { useEnemyStore } from './store/enemyStore'
+import { useMetaProgressionStore } from './store/metaProgressionStore'
 import LevelUpScreen from './components/LevelUpScreen'
 import StageClearScreen from './components/StageClearScreen'
+import RuinedCityBackground from './components/RuinedCityBackground'
 
 // ── 메뉴 서브페이지 타입 ─────────────────────────────────────
-type MenuPage = 'main' | 'story' | 'shop' | 'options'
+type MenuPage = 'main' | 'story' | 'prologue' | 'shop' | 'options'
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gameLoopRef = useRef<GameLoop | null>(null)
   const gameStore = useGameStore()
+  const metaStore = useMetaProgressionStore()
   const [menuPage, setMenuPage] = useState<MenuPage>('main')
 
   useEffect(() => {
+    useMetaProgressionStore.getState().loadFromLocalStorage()
+
     if (!canvasRef.current) return
 
     gameLoopRef.current = new GameLoop(canvasRef.current)
@@ -125,7 +130,12 @@ function App() {
 
       {/* ── 메인 메뉴 ───────────────────────────────────────── */}
       {gameStore.currentScene === 'menu' && menuPage === 'main' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 text-center px-6">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center text-center px-6">
+          <RuinedCityBackground />
+          <div className="absolute top-6 right-6 rounded-lg border border-amber-400/60 bg-black/50 px-4 py-2 text-sm font-semibold text-amber-300">
+            GOLD {metaStore.totalGold.toLocaleString()}
+          </div>
+
           {/* 타이틀 */}
           <h1 className="mb-2 text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">
             Ruin's City
@@ -134,13 +144,13 @@ function App() {
 
           <div className="flex flex-col gap-4 w-56">
             <MenuButton onClick={() => setMenuPage('story')} primary>
-              스토리
+              PLAY
             </MenuButton>
             <MenuButton onClick={() => setMenuPage('shop')}>
-              상점
+              STORE
             </MenuButton>
             <MenuButton onClick={() => setMenuPage('options')}>
-              옵션
+              SETTINGS
             </MenuButton>
           </div>
         </div>
@@ -148,7 +158,8 @@ function App() {
 
       {/* ── 스토리 (스테이지 선택) ─────────────────────────── */}
       {gameStore.currentScene === 'menu' && menuPage === 'story' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 px-6">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
+          <RuinedCityBackground />
           <div className="w-full max-w-xl">
             {/* 헤더 */}
             <div className="flex items-center mb-8">
@@ -158,7 +169,7 @@ function App() {
               >
                 ←
               </button>
-              <h2 className="text-3xl font-bold text-white">스토리</h2>
+              <h2 className="text-3xl font-bold text-white">PLAY</h2>
             </div>
 
             {/* 챕터 */}
@@ -171,7 +182,7 @@ function App() {
               {/* 1-1 해금 */}
               <button
                 className="group relative bg-slate-800 border-2 border-cyan-500 rounded-xl p-5 text-center hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/20 transition"
-                onClick={startGame}
+                onClick={() => setMenuPage('prologue')}
               >
                 <div className="text-2xl font-black text-cyan-400 group-hover:text-cyan-200 transition">1-1</div>
                 <div className="text-xs text-slate-400 mt-1">전초기지</div>
@@ -194,13 +205,55 @@ function App() {
         </div>
       )}
 
+      {/* ── 프롤로그 ─────────────────────────────────────────── */}
+      {gameStore.currentScene === 'menu' && menuPage === 'prologue' && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
+          <RuinedCityBackground />
+          <div className="w-full max-w-xl text-center">
+            <div className="flex items-center mb-10">
+              <button
+                className="mr-4 text-slate-400 hover:text-white transition text-2xl"
+                onClick={() => setMenuPage('story')}
+              >←</button>
+              <h2 className="text-3xl font-bold text-white tracking-widest">PROLOGUE</h2>
+            </div>
+
+            <div className="mb-10 rounded-xl border border-slate-700 bg-slate-900/80 px-8 py-10 text-center">
+              <div className="text-6xl mb-6 opacity-60">🌆</div>
+              <p className="text-slate-400 text-lg leading-relaxed mb-2">
+                도시는 폐허가 되었다.
+              </p>
+              <p className="text-slate-500 text-sm leading-loose">
+                — 스토리 준비 중 —
+              </p>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                className="rounded-full bg-slate-700 border border-slate-500 px-8 py-3 font-bold text-white hover:bg-slate-600 transition"
+                onClick={() => setMenuPage('story')}
+              >
+                ← 뒤로
+              </button>
+              <button
+                className="rounded-full bg-cyan-500 px-10 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/30 hover:bg-cyan-400 transition"
+                onClick={startGame}
+              >
+                1-1 시작 ▶
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 상점 (미구현) ───────────────────────────────────── */}
       {gameStore.currentScene === 'menu' && menuPage === 'shop' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 px-6">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
+          <RuinedCityBackground />
           <div className="w-full max-w-xl">
             <div className="flex items-center mb-8">
               <button className="mr-4 text-slate-400 hover:text-white transition text-2xl" onClick={() => setMenuPage('main')}>←</button>
-              <h2 className="text-3xl font-bold text-white">상점</h2>
+              <h2 className="text-3xl font-bold text-white">STORE</h2>
             </div>
             <div className="text-center text-slate-500 py-20 border-2 border-dashed border-slate-700 rounded-xl">
               <div className="text-5xl mb-4">🛒</div>
@@ -212,11 +265,12 @@ function App() {
 
       {/* ── 옵션 (미구현) ───────────────────────────────────── */}
       {gameStore.currentScene === 'menu' && menuPage === 'options' && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 px-6">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
+          <RuinedCityBackground />
           <div className="w-full max-w-xl">
             <div className="flex items-center mb-8">
               <button className="mr-4 text-slate-400 hover:text-white transition text-2xl" onClick={() => setMenuPage('main')}>←</button>
-              <h2 className="text-3xl font-bold text-white">옵션</h2>
+              <h2 className="text-3xl font-bold text-white">SETTINGS</h2>
             </div>
             <div className="text-center text-slate-500 py-20 border-2 border-dashed border-slate-700 rounded-xl">
               <div className="text-5xl mb-4">⚙️</div>

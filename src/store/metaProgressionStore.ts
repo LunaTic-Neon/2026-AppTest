@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 
 interface MetaProgressionState {
+  totalGold: number
+  totalClears: number
   totalScrap: number
   totalData: number
   unlockedWeapons: string[]
@@ -15,6 +17,7 @@ interface MetaProgressionState {
     doubleExp: boolean
   }
 
+  addGold: (amount: number) => void
   addScrap: (amount: number) => void
   addData: (amount: number) => void
   unlockWeapon: (weaponId: string) => void
@@ -26,6 +29,8 @@ interface MetaProgressionState {
 }
 
 const INITIAL_STATE = {
+  totalGold: 0,
+  totalClears: 0,
   totalScrap: 0,
   totalData: 0,
   unlockedWeapons: [],
@@ -43,6 +48,15 @@ const INITIAL_STATE = {
 
 export const useMetaProgressionStore = create<MetaProgressionState>((set, get) => ({
   ...INITIAL_STATE,
+
+  addGold: (amount) => {
+    const gain = Math.max(0, Math.floor(amount))
+    set((state) => ({
+      totalGold: state.totalGold + gain,
+      totalClears: state.totalClears + 1,
+    }))
+    get().saveToLocalStorage()
+  },
 
   addScrap: (amount) =>
     set((state) => ({
@@ -97,6 +111,8 @@ export const useMetaProgressionStore = create<MetaProgressionState>((set, get) =
     localStorage.setItem(
       'metaProgression',
       JSON.stringify({
+        totalGold: state.totalGold,
+        totalClears: state.totalClears,
         totalScrap: state.totalScrap,
         totalData: state.totalData,
         unlockedWeapons: state.unlockedWeapons,

@@ -1,5 +1,7 @@
+import { useEffect, useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { usePlayerStore } from '../store/playerStore'
+import { useMetaProgressionStore } from '../store/metaProgressionStore'
 
 interface Props {
   onReturnToMenu: () => void
@@ -9,9 +11,44 @@ interface Props {
 export default function StageClearScreen({ onReturnToMenu, onRestart }: Props) {
   const gameStore = useGameStore()
   const playerStore = usePlayerStore()
+  const metaStore = useMetaProgressionStore()
 
   const minutes = Math.floor(gameStore.gameTime / 60)
   const seconds = Math.floor(gameStore.gameTime % 60)
+
+  // 금화 설계
+  // 시간 보상: 3분(180s) 이하 = 2000G, 7분(420s) 이상 = 500G, 선형 감소
+  // 처치 보상: 처치 수 직접 합산
+  const goldAward = useMemo(() => {
+    const clearTime = Math.max(1, gameStore.gameTime)
+    const killCount = Math.max(0, gameStore.killCount)
+
+    const MIN_TIME = 180  // 3분
+    const MAX_TIME = 420  // 7분
+    const GOLD_AT_MIN = 2000
+    const GOLD_AT_MAX = 500
+
+    let timeGold: number
+    if (clearTime <= MIN_TIME) {
+      timeGold = GOLD_AT_MIN
+    } else if (clearTime >= MAX_TIME) {
+      timeGold = GOLD_AT_MAX
+    } else {
+      timeGold = Math.round(
+        GOLD_AT_MIN + ((clearTime - MIN_TIME) / (MAX_TIME - MIN_TIME)) * (GOLD_AT_MAX - GOLD_AT_MIN)
+      )
+    }
+
+    return timeGold + killCount
+  }, [gameStore.gameTime, gameStore.killCount])
+
+  useEffect(() => {
+    const state = useGameStore.getState()
+    if (!state.stageClearRewardGranted) {
+      useMetaProgressionStore.getState().addGold(goldAward)
+      state.setStageClearRewardGranted(true)
+    }
+  }, [goldAward])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
@@ -58,6 +95,12 @@ export default function StageClearScreen({ onReturnToMenu, onRestart }: Props) {
             <p className="text-xs text-gray-400 mb-1">최종 레벨</p>
             <p className="text-xl font-bold text-white">Lv.{playerStore.player.level}</p>
           </div>
+        </div>
+
+        <div className="mb-8 rounded-lg border border-amber-400/50 bg-amber-900/20 px-4 py-3 text-center">
+          <p className="text-xs text-amber-300 mb-1">획득 금화</p>
+          <p className="text-2xl font-black text-amber-300">+{goldAward.toLocaleString()} G</p>
+          <p className="text-xs text-amber-200/80 mt-1">보유 금화 {metaStore.totalGold.toLocaleString()} G</p>
         </div>
 
         {/* 버튼 */}

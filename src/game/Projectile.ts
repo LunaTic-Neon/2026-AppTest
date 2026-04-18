@@ -6,7 +6,7 @@ export class ProjectileSystem {
   private projectiles: Projectile[] = []
   private nextProjectileId: number = 0
 
-  createProjectile(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number): Projectile {
+  createProjectile(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number, piercingCount: number = 0): Projectile {
     const actualSpeed = speed * GLOBAL_PROJECTILE_SPEED_SCALE
     const dx = targetX - x
     const dy = targetY - y
@@ -23,6 +23,8 @@ export class ProjectileSystem {
       damage,
       lifetime: 0,
       maxLifetime: 5,
+      piercingCount,
+      hitEnemyIds: [],
     }
 
     this.projectiles.push(projectile)

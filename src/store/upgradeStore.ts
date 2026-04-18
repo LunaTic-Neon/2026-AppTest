@@ -57,6 +57,13 @@ const DEFAULT_UPGRADES: Upgrade[] = [
     type: 'weapon',
     value: 1,
   },
+  {
+    id: 'piercing',
+    name: '관통',
+    description: '탄막이 적을 관통합니다 (최대 3단계)',
+    type: 'piercing',
+    value: 1,
+  },
 ]
 
 export const useUpgradeStore = create<UpgradeState>((set, get) => ({

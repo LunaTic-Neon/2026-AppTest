@@ -5,7 +5,7 @@ export const GAME_CONFIG = {
   },
   player: {
     initialRadius: 15,
-    initialHp: 300,
+    initialHp: 450,
     initialAttackPower: 10,
     initialAttackSpeed: 1,
     initialMoveSpeed: 400,

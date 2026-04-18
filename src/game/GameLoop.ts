@@ -348,11 +348,11 @@ export class GameLoop {
       }
       // ── 중간보스 행동: 도약 + 2단 탄막 ──────────────────
       else if (isBossEnemy) {
-        const LEAP_DURATION = 0.55
-        const LEAP_REST = 0.45
+        const LEAP_DURATION = 0.66
+        const LEAP_REST = 0.54
         const LEAP_SPEED = MINI_BOSS_LEAP_SPEED
-        const MID_SHOT_T = 0.25
-        const END_SHOT_T = 0.50
+        const MID_SHOT_T = 0.30
+        const END_SHOT_T = 0.60
 
         if (!(enemy as any).leapPhase) {
           ;(enemy as any).leapPhase = 'rest'
@@ -605,13 +605,15 @@ export class GameLoop {
   }
 
   private updateBossPattern3(boss: any, _player: Player, deltaTime: number) {
-    // 패턴 3: 무적 → 중앙 이동(0.5s) → 12면 중 8면 초당 5번 10초간 발사
+    // 패턴 3: 중앙 이동(0.5s) → 12면 중 8면 초당 5번 10초간 발사
+    // 발사 중 처음 5초만 코팅 무적(색 변화), 이후 5초는 피격 가능
     const CENTRALIZE_DURATION = 0.5
     const SHOOT_DURATION = 10.0
     const SHOOT_RATE = 5
+    const INVULNERABLE_WINDOW = 5.0
 
     if (boss.patternPhase === 'start') {
-      boss.invulnerable = true
+      boss.invulnerable = false
       boss.centralizeTimer = 0
       boss.patternTimer = 0
       boss.p3ShootTimer = 0
@@ -651,6 +653,7 @@ export class GameLoop {
       boss.patternTimer += deltaTime
       boss.p3ShootTimer += deltaTime
       boss.velocity = { x: 0, y: 0 }
+      boss.invulnerable = boss.patternTimer < INVULNERABLE_WINDOW
 
       const shotInterval = 1.0 / SHOOT_RATE
       if (boss.p3ShootTimer >= shotInterval) {
@@ -709,7 +712,17 @@ export class GameLoop {
         const projectile = projectiles[projectileIndex]
         const enemy = enemies[enemyIndex]
 
+        // 이미 이 투사체에 맞은 적이면 스킵 (관통 중복 방지)
+        const hitIds = projectile.hitEnemyIds
+        if (hitIds && hitIds.includes(enemy.id)) continue
+
         let damage = projectile.damage
+
+        // 패턴 3 무적 코팅 상태에서는 피해 무효
+        if ((enemy as any).isFinalBoss && (enemy as any).invulnerable) {
+          this.autoAttack.removeProjectileAt(projectileIndex)
+          continue
+        }
 
         // 패턴 2: 막에 먼저 피해를 입힘
         if ((enemy as any).isFinalBoss && (enemy as any).bossPattern === 2 && (enemy as any).shieldHealth !== undefined && (enemy as any).shieldHealth > 0) {
@@ -728,7 +741,15 @@ export class GameLoop {
         enemy.hp -= damage
         gameStore.addDamage(damage)
 
-        this.autoAttack.removeProjectileAt(projectileIndex)
+        // 관통 처리: piercingCount > 0이면 투사체 유지, 해당 적 기록
+        const piercingCount = projectile.piercingCount ?? 0
+        if (piercingCount > 0) {
+          projectile.piercingCount = piercingCount - 1
+          if (!projectile.hitEnemyIds) projectile.hitEnemyIds = []
+          projectile.hitEnemyIds.push(enemy.id)
+        } else {
+          this.autoAttack.removeProjectileAt(projectileIndex)
+        }
 
         if (enemy.hp <= 0) {
           // 최종보스 처치 → 스테이지 클리어
@@ -751,7 +772,8 @@ export class GameLoop {
     }
 
     const collidingEnemy = CollisionDetection.checkPlayerEnemyCollision(player, enemies)
-    if (collidingEnemy) {
+    const isDashing = (player.dashTimeRemaining || 0) > 0
+    if (!isDashing && collidingEnemy) {
       playerStore.setPlayerHP(player.hp - collidingEnemy.attackPower * 0.016)
     }
 
@@ -764,7 +786,9 @@ export class GameLoop {
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
       const p = enemyProjectiles[i]
       if (CollisionDetection.checkCircleCollision(player, player.radius, p, p.radius)) {
-        playerStore.setPlayerHP(player.hp - p.damage)
+        if (!isDashing) {
+          playerStore.setPlayerHP(player.hp - p.damage)
+        }
         this.enemyProjectileSystem.removeProjectile(i)
       }
     }

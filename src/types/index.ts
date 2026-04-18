@@ -25,6 +25,8 @@ export interface Player extends Vector2 {
   dashLastAt?: number
   // number of projectiles fired per attack (for multi-shot upgrades)
   projectileCount?: number
+  // piercing level: 0=none, 1=1pierce(2hit), 2=2pierce(3hit), 3=3pierce(4hit)
+  piercingLevel?: number
 }
 
 export interface Enemy extends Vector2 {
@@ -67,6 +69,10 @@ export interface Projectile extends Vector2 {
   damage: number
   lifetime: number
   maxLifetime: number
+  // piercing: remaining pierce hits (0 = no pierce)
+  piercingCount?: number
+  // track enemies already hit to prevent multi-hit
+  hitEnemyIds?: string[]
 }
 
 export interface GameStats {
@@ -79,7 +85,7 @@ export interface Upgrade {
   id: string
   name: string
   description: string
-  type: 'damage' | 'speed' | 'attackSpeed' | 'health' | 'weapon' | 'projectileSpeed'
+  type: 'damage' | 'speed' | 'attackSpeed' | 'health' | 'weapon' | 'projectileSpeed' | 'piercing'
   value: number
 }
 

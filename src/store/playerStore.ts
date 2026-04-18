@@ -38,6 +38,7 @@ const INITIAL_PLAYER: Player = {
   dashDuration: 0.18,
   dashSpeed: 900,
   projectileCount: 1, // default single shot
+  piercingLevel: 0,   // default no piercing
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({

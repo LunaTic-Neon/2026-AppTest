@@ -157,7 +157,13 @@ export class CanvasRenderer {
       if (activePattern === 2) {
         fillColor = '#003D3D'
       } else if (activePattern === 3) {
-        fillColor = '#1A3D1A'
+        if ((enemy as any).invulnerable) {
+          const coatPulse = 0.5 + 0.5 * Math.sin(time * 10)
+          const g = Math.floor(120 + coatPulse * 90)
+          fillColor = `rgb(20, ${g}, 60)`
+        } else {
+          fillColor = '#1A3D1A'
+        }
       }
       this.ctx.fillStyle = fillColor
       this.ctx.beginPath()
@@ -176,7 +182,7 @@ export class CanvasRenderer {
       if (activePattern === 2) {
         strokeColor = '#0080FF'
       } else if (activePattern === 3) {
-        strokeColor = '#00FF00'
+        strokeColor = (enemy as any).invulnerable ? '#33FFCC' : '#00FF00'
       }
       this.ctx.strokeStyle = strokeColor
       this.ctx.lineWidth = 2
@@ -196,7 +202,7 @@ export class CanvasRenderer {
       if (activePattern === 2) {
         borderColor = '#00BFFF'
       } else if (activePattern === 3) {
-        borderColor = '#00FF00'
+        borderColor = (enemy as any).invulnerable ? '#66FFE0' : '#00FF00'
       }
       this.ctx.strokeStyle = borderColor
       this.ctx.lineWidth = 3
@@ -469,8 +475,8 @@ export class CanvasRenderer {
 
   public renderPlayerHealthBar(playerX: number, playerY: number, playerHP: number, maxHP: number) {
     // 플레이어 바로 아래에 작은 체력바
-    const barWidth = 60
-    const barHeight = 8
+    const barWidth = 76
+    const barHeight = 10
     const hpPercent = playerHP / maxHP
 
     // 배경
