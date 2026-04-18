@@ -444,14 +444,14 @@ export class CanvasRenderer {
     }
   }
 
-  public renderHUD(gameTime: number, killCount: number, _playerHP: number, _maxHP: number, playerLevel: number, _playerExp: number, _maxExp: number) {
-  const canvasWidth = GAME_CONFIG.canvas.width
+  public renderHUD(gameTime: number, killCount: number, playerHP: number, maxHP: number, playerLevel: number, _playerExp: number, _maxExp: number) {
+    const canvasWidth = GAME_CONFIG.canvas.width
     
     // 우측 상단 정보 패널 (생존시간, 처치, 레벨만)
     const panelX = canvasWidth - 280
     const panelY = 20
     const panelWidth = 260
-    const panelHeight = 120
+    const panelHeight = 168
     const padding = 15
 
     // 반투명 배경
@@ -472,27 +472,55 @@ export class CanvasRenderer {
 
     // 시간을 절댓값으로 표시 (음수 방지)
     const displayTime = Math.max(0, Math.floor(gameTime))
-    this.ctx.fillText(`⏱ ${displayTime}s`, panelX + padding, currentY)
+    this.ctx.fillText(`Time ${displayTime}s`, panelX + padding, currentY)
     currentY += 30
 
-    this.ctx.fillText(`💀 ${killCount}`, panelX + padding, currentY)
+    this.ctx.fillText(`Kill ${killCount}`, panelX + padding, currentY)
     currentY += 30
 
-    this.ctx.fillText(`⭐ ${playerLevel}`, panelX + padding, currentY)
+    this.ctx.fillText(`Level ${playerLevel}`, panelX + padding, currentY)
+
+    const hpPercent = Math.max(0, Math.min(1, playerHP / maxHP))
+    const hpBarX = panelX + padding
+    const hpBarY = currentY + 16
+    const hpBarWidth = panelWidth - padding * 2
+    const hpBarHeight = 14
+    const hpColor = hpPercent <= 0.25 ? '#FF3B30' : hpPercent <= 0.5 ? '#FFD60A' : '#00FF88'
+
+    this.ctx.font = 'bold 16px Arial'
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.fillText('HP', hpBarX, hpBarY - 6)
+
+    this.ctx.fillStyle = '#333333'
+    this.ctx.fillRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight)
+
+    this.ctx.fillStyle = hpColor
+    this.ctx.fillRect(hpBarX, hpBarY, hpBarWidth * hpPercent, hpBarHeight)
+
+    this.ctx.strokeStyle = GAME_COLORS.ui
+    this.ctx.lineWidth = 1
+    this.ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight)
+
+    this.ctx.font = 'bold 12px Arial'
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.textAlign = 'center'
+    this.ctx.fillText(`${Math.max(0, Math.ceil(playerHP))}/${maxHP}`, hpBarX + hpBarWidth / 2, hpBarY + 11)
+    this.ctx.textAlign = 'left'
   }
 
   public renderPlayerHealthBar(playerX: number, playerY: number, playerHP: number, maxHP: number) {
     // 플레이어 바로 아래에 작은 체력바
-    const barWidth = 76
+    const barWidth = 96
     const barHeight = 10
-    const hpPercent = playerHP / maxHP
+    const hpPercent = Math.max(0, Math.min(1, playerHP / maxHP))
+    const hpColor = hpPercent <= 0.25 ? '#FF3B30' : hpPercent <= 0.5 ? '#FFD60A' : '#00FF88'
 
     // 배경
     this.ctx.fillStyle = '#333333'
     this.ctx.fillRect(playerX - barWidth / 2, playerY + 35, barWidth, barHeight)
 
     // 체력
-    this.ctx.fillStyle = playerHP > maxHP * 0.25 ? '#00FF00' : '#FF0000'
+    this.ctx.fillStyle = hpColor
     this.ctx.fillRect(playerX - barWidth / 2, playerY + 35, barWidth * hpPercent, barHeight)
 
     // 테두리

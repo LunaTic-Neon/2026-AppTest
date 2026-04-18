@@ -189,7 +189,7 @@ export class GameLoop {
     const dynamicNormalCap = Math.min(MAX_NORMAL_ENEMIES + Math.floor(gameStore.gameTime / 30) * 15, 220)
     if (normalCount < dynamicNormalCap && this.enemySpawner.shouldSpawn()) {
       const newEnemies = this.enemySpawner.spawn(player.x, player.y)
-      const levelScale = 1 + (player.level || 1) * 0.06
+      const levelScale = 1 + (player.level || 1) * 0.05
       newEnemies.forEach((enemy) => {
         enemy.hp = Math.max(1, Math.floor(enemy.hp * levelScale))
         enemy.maxHp = Math.max(1, Math.floor(enemy.maxHp * levelScale))
@@ -465,6 +465,32 @@ export class GameLoop {
       }
     }
 
+    // 잡몹 겹침 완화: 보스/최종보스 제외하고 가까우면 살짝 밀어냄
+    for (let i = 0; i < enemies.length; i++) {
+      const a: any = enemies[i]
+      if (a.isBoss || a.isFinalBoss) continue
+      for (let j = i + 1; j < enemies.length; j++) {
+        const b: any = enemies[j]
+        if (b.isBoss || b.isFinalBoss) continue
+
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const dist = Math.hypot(dx, dy) || 0.0001
+        const minDist = (a.radius + b.radius) * 0.9
+        if (dist >= minDist) continue
+
+        const overlap = minDist - dist
+        const nx = dx / dist
+        const ny = dy / dist
+        const push = overlap * 0.5
+
+        a.x -= nx * push
+        a.y -= ny * push
+        b.x += nx * push
+        b.y += ny * push
+      }
+    }
+
     // 화면 밖 제거
     const canvasSize = this.renderer.getCanvasSize()
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -486,7 +512,9 @@ export class GameLoop {
     const y = playerY + Math.sin(angle) * distance
 
     const hp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 250))
-    const attackPower = GAME_CONFIG.enemy.basicAttackPower * 5.0
+    // 최종보스 공격력 = 일반 적 공격력 기준 60% (3분 시점 기준)
+    const normalAttackAtBossTime = GAME_CONFIG.enemy.basicAttackPower * (0.6 + FINAL_BOSS_SPAWN_TIME / 30) * 0.9
+    const attackPower = normalAttackAtBossTime * 0.6
 
     return {
       id: `finalboss_${Date.now()}`,

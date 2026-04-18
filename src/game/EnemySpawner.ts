@@ -94,13 +94,14 @@ export class EnemySpawner {
     // 극초반 낮게 시작, 시간에 따라 선형 증가
     // 0s→0.6배, 60s→2.6배, 180s→6.6배
     const difficultyMultiplier = 0.6 + this.gameTime / 30
+    const attackGlobalNerf = 0.9
     const base = GAME_CONFIG.enemy
 
     switch (type) {
       case 'shooter':
         return {
           hp: base.basicHp * 0.9 * difficultyMultiplier,
-          attackPower: base.basicAttackPower * 0.9 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 0.9 * difficultyMultiplier * attackGlobalNerf,
           moveSpeed: base.basicMoveSpeed * 0.85,
           projectileSpeed: 520,
           attackRange: 520,
@@ -109,19 +110,19 @@ export class EnemySpawner {
       case 'fast':
         return {
           hp: base.basicHp * 0.7 * difficultyMultiplier,
-          attackPower: base.basicAttackPower * 0.8 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 0.8 * difficultyMultiplier * attackGlobalNerf,
           moveSpeed: base.basicMoveSpeed * 1.7,
         }
       case 'tank':
         return {
           hp: base.basicHp * 1.8 * difficultyMultiplier,
-          attackPower: base.basicAttackPower * 1.2 * difficultyMultiplier,
+          attackPower: base.basicAttackPower * 1.2 * difficultyMultiplier * attackGlobalNerf,
           moveSpeed: base.basicMoveSpeed * 0.675,
         }
       default:
         return {
           hp: base.basicHp * difficultyMultiplier,
-          attackPower: base.basicAttackPower * difficultyMultiplier,
+          attackPower: base.basicAttackPower * difficultyMultiplier * attackGlobalNerf,
           moveSpeed: base.basicMoveSpeed * 1.05,
         }
     }
@@ -148,9 +149,14 @@ export class EnemySpawner {
     const x = playerX + Math.cos(angle) * distance
     const y = playerY + Math.sin(angle) * distance
 
-    // 중간보스 체력 = 기본 18배 * 3배 = 54배
-    const hp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 54))
-    const attackPower = GAME_CONFIG.enemy.basicAttackPower * 3.0
+    // 중간보스 체력: 1회차 2/3, 2회차 기본, 3회차 2배
+    const baseHp = Math.max(1, Math.floor(GAME_CONFIG.enemy.basicHp * 54))
+    const hpScale = this.miniBossCount === 1 ? 2 / 3 : this.miniBossCount === 3 ? 2 : 1
+    const hp = Math.max(1, Math.floor(baseHp * hpScale))
+
+    // 중간보스 공격력 = 일반 적 공격력 기준 80%
+    const normalAttack = GAME_CONFIG.enemy.basicAttackPower * (0.6 + this.gameTime / 30) * 0.9
+    const attackPower = normalAttack * 0.8
 
     const boss: Enemy = {
       id: `boss_${Date.now()}`,

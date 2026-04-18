@@ -55,6 +55,14 @@ function App() {
         } else if (currentScene === 'paused') {
           useGameStore.getState().setCurrentScene('playing')
           gameLoopRef.current?.start()
+        } else if (currentScene === 'menu') {
+          if (selectedStage) {
+            setSelectedStage(null)
+          }
+          if (menuPage !== 'main') {
+            setMenuPage('main')
+            setShowResetConfirm(false)
+          }
         }
       }
     }
@@ -65,7 +73,7 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown)
       gameLoopRef.current?.destroy()
     }
-  }, [])
+  }, [menuPage, selectedStage])
 
   // 스테이지 클리어 시 클리어 기록
   useEffect(() => {
@@ -291,7 +299,6 @@ function App() {
       {prologueRewardMsg && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="rounded-xl border-2 border-amber-400 bg-black/85 px-8 py-5 text-center shadow-2xl">
-            <div className="text-4xl mb-2">🏆</div>
             <div className="text-amber-300 text-xl font-bold">{prologueRewardMsg}</div>
           </div>
         </div>
@@ -351,18 +358,19 @@ function App() {
               <button className="mr-4 text-slate-400 hover:text-white transition text-2xl" onClick={() => setMenuPage('main')}>←</button>
               <h2 className="text-3xl font-bold text-white">SETTINGS</h2>
             </div>
-            <SettingsPanel />
-            <div className="mt-6">
+            <div className="rounded-xl border border-slate-600 bg-slate-900/90 p-3 sm:p-4">
+              <SettingsPanel />
+              <div className="mt-3 flex justify-end">
               {!showResetConfirm ? (
                 <button
-                  className="w-full rounded border border-red-700 bg-red-900/40 px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-800/60 transition"
+                  className="rounded border border-red-700 bg-red-900/40 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-800/60 transition"
                   onClick={() => setShowResetConfirm(true)}
                 >
                   게임 초기화
                 </button>
               ) : (
-                <div className="rounded border border-red-500 bg-red-950/80 px-4 py-4 text-sm text-red-300">
-                  <p className="mb-3 font-semibold">⚠ 모든 진행 상황(골드, 구매 내역, 스테이지 클리어, 언어 등)이 초기화됩니다. 계속하시겠습니까?</p>
+                <div className="w-full rounded border border-red-500 bg-red-950/80 px-4 py-4 text-sm text-red-300">
+                  <p className="mb-3 font-semibold">모든 진행 상황(골드, 구매 내역, 스테이지 클리어 등)이 초기화됩니다. 계속하시겠습니까?</p>
                   <div className="flex gap-3">
                     <button
                       className="flex-1 rounded bg-red-600 px-4 py-2 font-bold text-white hover:bg-red-500 transition"
@@ -382,6 +390,7 @@ function App() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>

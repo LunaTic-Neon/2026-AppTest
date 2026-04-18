@@ -25,9 +25,9 @@ const DEFAULT_UPGRADES: Upgrade[] = [
   {
     id: 'speed_1',
     name: '이동속도 증가',
-    description: '이동속도가 15% 증가합니다',
+    description: '이동속도가 10% 증가합니다',
     type: 'speed',
-    value: 1.15,
+    value: 1.1,
   },
   {
     id: 'attackspeed_1',
