@@ -92,23 +92,28 @@ export class CanvasRenderer {
 
   public renderPlayer(player: Player) {
     const { x, y, radius, rotation } = player
+    const isDashing = (player as any).dashTimeRemaining > 0
 
     this.ctx.save()
     this.ctx.translate(x, y)
     this.ctx.rotate(rotation)
 
-    this.ctx.fillStyle = GAME_COLORS.player
+    if (isDashing) {
+      this.ctx.globalAlpha = 0.45
+    }
+
+    this.ctx.fillStyle = isDashing ? '#005533' : GAME_COLORS.player
     this.ctx.beginPath()
     this.ctx.arc(0, 0, radius, 0, Math.PI * 2)
     this.ctx.fill()
 
-    this.ctx.strokeStyle = '#00FF88'
+    this.ctx.strokeStyle = isDashing ? '#007744' : '#00FF88'
     this.ctx.lineWidth = 2
     this.ctx.beginPath()
     this.ctx.arc(0, 0, radius, 0, Math.PI * 2)
     this.ctx.stroke()
 
-    this.ctx.fillStyle = '#00FF88'
+    this.ctx.fillStyle = isDashing ? '#007744' : '#00FF88'
     this.ctx.beginPath()
     this.ctx.arc(radius - 3, 0, 3, 0, Math.PI * 2)
     this.ctx.fill()
@@ -380,20 +385,23 @@ export class CanvasRenderer {
   public renderAimCursor(x: number, y: number, active: boolean) {
     if (!active) return
 
-    const size = 18
+    const circleR = 10
+    const armLen = 18
     this.ctx.save()
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
+    this.ctx.strokeStyle = 'rgba(255, 30, 30, 0.95)'
     this.ctx.lineWidth = 2
 
+    // 빨간 원
     this.ctx.beginPath()
-    this.ctx.arc(x, y, size, 0, Math.PI * 2)
+    this.ctx.arc(x, y, circleR, 0, Math.PI * 2)
     this.ctx.stroke()
 
+    // 원을 뚫고 삐져나오는 십자가
     this.ctx.beginPath()
-    this.ctx.moveTo(x - size * 0.7, y)
-    this.ctx.lineTo(x + size * 0.7, y)
-    this.ctx.moveTo(x, y - size * 0.7)
-    this.ctx.lineTo(x, y + size * 0.7)
+    this.ctx.moveTo(x - armLen, y)
+    this.ctx.lineTo(x + armLen, y)
+    this.ctx.moveTo(x, y - armLen)
+    this.ctx.lineTo(x, y + armLen)
     this.ctx.stroke()
 
     this.ctx.restore()

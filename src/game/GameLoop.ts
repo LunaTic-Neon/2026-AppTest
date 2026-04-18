@@ -2,6 +2,7 @@ import { CanvasRenderer } from './canvas/CanvasRenderer'
 import { useGameStore } from '../store/gameStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useEnemyStore } from '../store/enemyStore'
+import { useMetaProgressionStore } from '../store/metaProgressionStore'
 import { GAME_CONFIG, getExpMultiplier } from '../config/gameConfig'
 import { Player } from '../types'
 import { EnemySpawner, MINI_BOSS_LEAP_SPEED } from './EnemySpawner'
@@ -102,15 +103,19 @@ export class GameLoop {
     const gameStore = useGameStore.getState()
     const playerStore = usePlayerStore.getState()
     const enemyStore = useEnemyStore.getState()
+    const metaStore = useMetaProgressionStore.getState()
 
     if (gameStore.currentScene !== 'playing') return
 
-    const newGameTime = gameStore.gameTime + deltaTime
+    const timeScale = metaStore.selectedTimeScale || 1.0
+    const scaledDeltaTime = deltaTime * timeScale
+
+    const newGameTime = gameStore.gameTime + scaledDeltaTime
     gameStore.setGameTime(newGameTime)
 
-    this.updatePlayerMovement(playerStore, deltaTime)
-    this.updateEnemies(enemyStore, playerStore, gameStore, deltaTime)
-    this.updateCombat(enemyStore, playerStore, gameStore)
+    this.updatePlayerMovement(playerStore, scaledDeltaTime)
+    this.updateEnemies(enemyStore, playerStore, gameStore, scaledDeltaTime)
+    this.updateCombat(enemyStore, playerStore, gameStore, scaledDeltaTime)
     this.checkLevelUp(playerStore, gameStore)
   }
 
@@ -348,11 +353,11 @@ export class GameLoop {
       }
       // ── 중간보스 행동: 도약 + 2단 탄막 ──────────────────
       else if (isBossEnemy) {
-        const LEAP_DURATION = 0.66
-        const LEAP_REST = 0.54
+        const LEAP_DURATION = 0.726
+        const LEAP_REST = 0.594
         const LEAP_SPEED = MINI_BOSS_LEAP_SPEED
-        const MID_SHOT_T = 0.30
-        const END_SHOT_T = 0.60
+        const MID_SHOT_T = 0.33
+        const END_SHOT_T = 0.66
 
         if (!(enemy as any).leapPhase) {
           ;(enemy as any).leapPhase = 'rest'
@@ -543,8 +548,12 @@ export class GameLoop {
       // 순간이동: 플레이어 기준 원점대칭 (한 번만 실행)
       if (!boss.p1TeleportDone && boss.patternTimer >= TELEPORT_AT) {
         boss.p1TeleportDone = true
-        boss.x = 2 * player.x - boss.x
-        boss.y = 2 * player.y - boss.y
+        const canvas = this.renderer.getCanvasSize()
+        const radius = boss.radius || 0
+        const mirroredX = 2 * player.x - boss.x
+        const mirroredY = 2 * player.y - boss.y
+        boss.x = Math.max(radius, Math.min(mirroredX, canvas.width - radius))
+        boss.y = Math.max(radius, Math.min(mirroredY, canvas.height - radius))
       }
 
       // 12방향 방사형 탄환 발사 (한 번만 실행)
@@ -689,12 +698,11 @@ export class GameLoop {
   private updateCombat(
     enemyStore: any,
     playerStore: any,
-    gameStore: any
+    gameStore: any,
+    deltaTime: number
   ) {
     const player = playerStore.player
     const enemies = enemyStore.enemies
-    const deltaTime = GAME_CONFIG.gameplay.deltaTimeMax
-
     const mouseInput = this.renderer.getMouseInput()
     const mousePos = mouseInput.getMousePosition()
     const isMouseClicking = mouseInput.isMouseClicking()
@@ -778,19 +786,17 @@ export class GameLoop {
     }
 
     this.enemyProjectileSystem.update(
-      GAME_CONFIG.gameplay.deltaTimeMax,
+      deltaTime,
       this.renderer.getCanvasSize().width,
       this.renderer.getCanvasSize().height
     )
     const enemyProjectiles = this.enemyProjectileSystem.getProjectiles()
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
       const p = enemyProjectiles[i]
-      if (CollisionDetection.checkCircleCollision(player, player.radius, p, p.radius)) {
-        if (!isDashing) {
-          playerStore.setPlayerHP(player.hp - p.damage)
-        }
-        this.enemyProjectileSystem.removeProjectile(i)
-      }
+      if (!CollisionDetection.checkCircleCollision(player, player.radius, p, p.radius)) continue
+      if (isDashing) continue // 대쉬 중 탄막 통과
+      playerStore.setPlayerHP(player.hp - p.damage)
+      this.enemyProjectileSystem.removeProjectile(i)
     }
   }
 
@@ -836,13 +842,13 @@ export class GameLoop {
 
       this.renderer.renderPlayerHealthBar(x, y, hp, maxHp)
 
-      // 중간보스 체력바
-      const miniBoss = enemyStore.enemies.find(
+      // 중간보스 체력바 (모든 중간보스)
+      const miniBosses = enemyStore.enemies.filter(
         (e) => (e as any).isBoss && !(e as any).isFinalBoss
       )
-      if (miniBoss) {
+      miniBosses.forEach((miniBoss) => {
         this.renderer.renderBossHealthBar(miniBoss.x, miniBoss.y, miniBoss.radius, miniBoss.hp, miniBoss.maxHp)
-      }
+      })
 
       // 최종보스 체력바 (화면 하단 중앙)
       const finalBoss = enemyStore.enemies.find((e) => (e as any).isFinalBoss)

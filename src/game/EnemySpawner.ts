@@ -2,7 +2,7 @@ import { Enemy } from '../types'
 import { GAME_CONFIG } from '../config/gameConfig'
 
 // 중간보스 도약 속도 (GameLoop에서 참조)
-export const MINI_BOSS_LEAP_SPEED = 720
+export const MINI_BOSS_LEAP_SPEED = 576
 
 export class EnemySpawner {
   private spawnRate: number = 1.2           // 초기 스폰률
