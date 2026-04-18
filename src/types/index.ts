@@ -46,6 +46,19 @@ export interface Enemy extends Vector2 {
   phaseIndex?: number
   phaseTimer?: number
   shootTimer?: number
+  // 최종보스 전용 필드
+  isFinalBoss?: boolean
+  bossPattern?: 1 | 2 | 3
+  patternTimer?: number
+  patternPhase?: 'start' | 'active' | 'end' | 'cooldown'
+  shieldHealth?: number
+  shieldMaxHealth?: number
+  shieldCountdown?: number
+  invulnerable?: boolean
+  patternBrightness?: number
+  patternTeleportDelay?: number
+  patternCentralizing?: boolean
+  centralizeTimer?: number
 }
 
 export interface Projectile extends Vector2 {

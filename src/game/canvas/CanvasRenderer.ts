@@ -119,19 +119,45 @@ export class CanvasRenderer {
   public renderEnemy(enemy: Enemy) {
     const { x, y, radius, type } = enemy
 
-    // ── 최종보스: 정12각형 ─────────────────────────────────
+    // ── 최종보스: 패턴별 렌더링 ────────────────────────────
     if ((enemy as any).isFinalBoss) {
       const size = radius * 2
       const sides = 12
       const angleOffset = -Math.PI / 2
       const time = Date.now() / 1000
+      const pattern = (enemy as any).bossPattern
+
+      this.ctx.save()
+
+      // 패턴 3: 무적 상태 (색상 코팅)
+      if ((enemy as any).invulnerable) {
+        this.ctx.globalAlpha = 0.7
+      }
 
       // 외부 글로우
-      this.ctx.save()
-      this.ctx.shadowColor = '#FF0080'
-      this.ctx.shadowBlur = 24
+      if (pattern === 1) {
+        // 패턴 1: 밝기 변화
+        const brightness = (enemy as any).patternBrightness || 0
+        this.ctx.shadowColor = `rgba(255, 0, 128, ${0.3 + brightness * 0.7})`
+        this.ctx.shadowBlur = 24 + brightness * 20
+      } else if (pattern === 2) {
+        // 패턴 2: 파란색 기본
+        this.ctx.shadowColor = '#0080FF'
+        this.ctx.shadowBlur = 24
+      } else {
+        // 패턴 3: 초록색/무적 표시
+        this.ctx.shadowColor = '#00FF00'
+        this.ctx.shadowBlur = 20
+      }
 
-      this.ctx.fillStyle = '#3D0030'
+      // 보스 몸체
+      let fillColor = '#3D0030'
+      if (pattern === 2) {
+        fillColor = '#003D3D'
+      } else if (pattern === 3) {
+        fillColor = '#1A3D1A'
+      }
+      this.ctx.fillStyle = fillColor
       this.ctx.beginPath()
       for (let i = 0; i < sides; i++) {
         const a = angleOffset + (i / sides) * Math.PI * 2
@@ -144,7 +170,13 @@ export class CanvasRenderer {
       this.ctx.fill()
 
       // 내부 회전 문양
-      this.ctx.strokeStyle = '#FF0080'
+      let strokeColor = '#FF0080'
+      if (pattern === 2) {
+        strokeColor = '#0080FF'
+      } else if (pattern === 3) {
+        strokeColor = '#00FF00'
+      }
+      this.ctx.strokeStyle = strokeColor
       this.ctx.lineWidth = 2
       this.ctx.beginPath()
       for (let i = 0; i < sides; i++) {
@@ -158,7 +190,13 @@ export class CanvasRenderer {
       this.ctx.stroke()
 
       // 테두리
-      this.ctx.strokeStyle = '#FF4DC4'
+      let borderColor = '#FF4DC4'
+      if (pattern === 2) {
+        borderColor = '#00BFFF'
+      } else if (pattern === 3) {
+        borderColor = '#00FF00'
+      }
+      this.ctx.strokeStyle = borderColor
       this.ctx.lineWidth = 3
       this.ctx.beginPath()
       for (let i = 0; i < sides; i++) {
@@ -171,11 +209,29 @@ export class CanvasRenderer {
       this.ctx.closePath()
       this.ctx.stroke()
 
+      // 패턴 2: 막 렌더링
+      if (pattern === 2 && (enemy as any).shieldHealth !== undefined) {
+        const shieldRadius = size * 1.3
+        this.ctx.strokeStyle = '#0080FF'
+        this.ctx.lineWidth = 4
+        this.ctx.globalAlpha = 0.5
+        this.ctx.beginPath()
+        this.ctx.arc(x, y, shieldRadius, 0, Math.PI * 2)
+        this.ctx.stroke()
+        this.ctx.globalAlpha = 1.0
+      }
+
       this.ctx.restore()
 
       // BOSS 레이블
       this.ctx.font = 'bold 16px Arial'
-      this.ctx.fillStyle = '#FF4DC4'
+      if (pattern === 2) {
+        this.ctx.fillStyle = '#00BFFF'
+      } else if (pattern === 3) {
+        this.ctx.fillStyle = '#00FF00'
+      } else {
+        this.ctx.fillStyle = '#FF4DC4'
+      }
       this.ctx.textAlign = 'center'
       this.ctx.fillText('★ BOSS ★', x, y - size - 10)
       return
@@ -435,7 +491,7 @@ export class CanvasRenderer {
   }
 
   // ── 최종보스 체력바 (화면 하단 중앙, 넓고 화려하게) ────────
-  public renderFinalBossHealthBar(hp: number, maxHp: number) {
+  public renderFinalBossHealthBar(hp: number, maxHp: number, boss?: any) {
     const canvasWidth = GAME_CONFIG.canvas.width
     const canvasHeight = GAME_CONFIG.canvas.height
     const barWidth = 600
@@ -445,8 +501,15 @@ export class CanvasRenderer {
     const hpPercent = Math.max(0, Math.min(1, hp / maxHp))
 
     // 레이블
+    let labelColor = '#FF4DC4'
+    if (boss?.bossPattern === 2) {
+      labelColor = '#00BFFF'
+    } else if (boss?.bossPattern === 3) {
+      labelColor = '#00FF00'
+    }
+
     this.ctx.font = 'bold 14px Arial'
-    this.ctx.fillStyle = '#FF4DC4'
+    this.ctx.fillStyle = labelColor
     this.ctx.textAlign = 'center'
     this.ctx.fillText('★ BOSS ★', canvasWidth / 2, barY - 6)
 
@@ -456,13 +519,21 @@ export class CanvasRenderer {
 
     // 체력 (그라디언트)
     const grad = this.ctx.createLinearGradient(barX, 0, barX + barWidth, 0)
-    grad.addColorStop(0, '#FF0080')
-    grad.addColorStop(1, '#FF4DC4')
+    if (boss?.bossPattern === 2) {
+      grad.addColorStop(0, '#0080FF')
+      grad.addColorStop(1, '#00BFFF')
+    } else if (boss?.bossPattern === 3) {
+      grad.addColorStop(0, '#00FF00')
+      grad.addColorStop(1, '#00FF80')
+    } else {
+      grad.addColorStop(0, '#FF0080')
+      grad.addColorStop(1, '#FF4DC4')
+    }
     this.ctx.fillStyle = grad
     this.ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight)
 
     // 테두리
-    this.ctx.strokeStyle = '#FF4DC4'
+    this.ctx.strokeStyle = labelColor
     this.ctx.lineWidth = 2
     this.ctx.strokeRect(barX, barY, barWidth, barHeight)
 
@@ -470,6 +541,48 @@ export class CanvasRenderer {
     this.ctx.font = '12px Arial'
     this.ctx.fillStyle = '#FFFFFF'
     this.ctx.fillText(`${Math.ceil(hp)} / ${maxHp}`, canvasWidth / 2, barY + barHeight - 3)
+
+    // 패턴 2: 막 체력바 및 카운트다운
+    if (boss?.bossPattern === 2 && boss?.shieldMaxHealth !== undefined) {
+      const shieldPercent = Math.max(0, Math.min(1, boss.shieldHealth / boss.shieldMaxHealth))
+      const shieldBarY = barY + 35
+      const shieldBarWidth = 300
+      const shieldBarX = (canvasWidth - shieldBarWidth) / 2
+
+      // 막 레이블
+      this.ctx.font = 'bold 12px Arial'
+      this.ctx.fillStyle = '#00BFFF'
+      this.ctx.textAlign = 'center'
+      this.ctx.fillText('SHIELD', canvasWidth / 2, shieldBarY - 8)
+
+      // 막 체력바 배경
+      this.ctx.fillStyle = '#0A1A2E'
+      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth, 12)
+
+      // 막 체력 (파란색)
+      this.ctx.fillStyle = '#0080FF'
+      this.ctx.fillRect(shieldBarX, shieldBarY, shieldBarWidth * shieldPercent, 12)
+
+      // 막 체력바 테두리
+      this.ctx.strokeStyle = '#00BFFF'
+      this.ctx.lineWidth = 1
+      this.ctx.strokeRect(shieldBarX, shieldBarY, shieldBarWidth, 12)
+
+      // 카운트다운 표시
+      const countdown = Math.max(0, Math.ceil(boss.shieldCountdown || 0))
+      this.ctx.font = 'bold 24px Arial'
+      this.ctx.fillStyle = countdown > 2 ? '#00BFFF' : '#FF4444'
+      this.ctx.textAlign = 'center'
+      this.ctx.fillText(`${countdown}s`, canvasWidth / 2, shieldBarY + 55)
+    }
+
+    // 패턴 3: 무적 표시
+    if (boss?.bossPattern === 3 && boss?.invulnerable) {
+      this.ctx.font = 'bold 20px Arial'
+      this.ctx.fillStyle = '#00FF00'
+      this.ctx.textAlign = 'center'
+      this.ctx.fillText('INVULNERABLE', canvasWidth / 2, barY + 50)
+    }
   }
 
   // ── 최종보스 등장 카운트다운 (3분 전까지) ─────────────────

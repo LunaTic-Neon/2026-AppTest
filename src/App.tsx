@@ -80,6 +80,11 @@ function App() {
 
   const isPlaying = gameStore.currentScene === 'playing'
 
+  // ── 개발자 모드: 시간 조작 (프로덕션에서 제거 가능) ──────
+  const devSetGameTime = (seconds: number) => {
+    useGameStore.getState().setGameTime(seconds)
+  }
+
   return (
     <div className="w-full h-screen bg-primary overflow-hidden relative flex items-center justify-center">
       {isPlaying && (
@@ -90,6 +95,26 @@ function App() {
         >
           ⚙
         </button>
+      )}
+
+      {/* ── 개발자 모드: 시간 조작 버튼 (DEV_MODE 활성화 시만 표시) ── */}
+      {isPlaying && (
+        <div className="absolute bottom-4 left-4 z-20 flex gap-2">
+          <button
+            className="px-3 py-1 text-xs bg-yellow-600/80 text-white rounded hover:bg-yellow-600 transition"
+            onClick={() => devSetGameTime(45)}
+            title="45초: 중간보스 확인"
+          >
+            [DEV] 45s
+          </button>
+          <button
+            className="px-3 py-1 text-xs bg-red-600/80 text-white rounded hover:bg-red-600 transition"
+            onClick={() => devSetGameTime(175)}
+            title="175초(2:55): 최종보스 직전"
+          >
+            [DEV] 2:55
+          </button>
+        </div>
       )}
 
       <canvas
