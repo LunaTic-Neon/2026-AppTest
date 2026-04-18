@@ -127,10 +127,10 @@ function App() {
       {gameStore.currentScene === 'menu' && menuPage === 'main' && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 text-center px-6">
           {/* 타이틀 */}
-          <h1 className="mb-2 text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">
-            NEXUS
+          <h1 className="mb-2 text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">
+            Ruin's City
           </h1>
-          <p className="mb-12 text-slate-400 text-sm tracking-widest">ROGUELIKE SURVIVAL</p>
+          <p className="mb-12 text-slate-400 text-sm tracking-widest">SURVIVE THE RUINS</p>
 
           <div className="flex flex-col gap-4 w-56">
             <MenuButton onClick={() => setMenuPage('story')} primary>

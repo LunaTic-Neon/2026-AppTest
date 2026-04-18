@@ -53,6 +53,8 @@ export class GameLoop {
     // dash on Space
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
+        // 포커스된 버튼의 기본 click 동작을 막아 DEV 버튼이 재실행되는 버그 방지
+        e.preventDefault()
         const playerStore = usePlayerStore.getState()
         const player = playerStore.player
 
@@ -765,7 +767,7 @@ export class GameLoop {
       this.renderer.renderPlayer(playerStore.player)
       this.renderer.renderEnemies(enemyStore.enemies)
       this.renderer.renderProjectiles(this.autoAttack.getProjectiles())
-      this.renderer.renderProjectiles(this.enemyProjectileSystem.getProjectiles())
+      this.renderer.renderProjectiles(this.enemyProjectileSystem.getProjectiles(), true)
 
       const mouseInput = this.renderer.getMouseInput()
       const mousePos = mouseInput.getMousePosition()

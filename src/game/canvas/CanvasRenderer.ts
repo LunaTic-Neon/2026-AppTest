@@ -73,21 +73,21 @@ export class CanvasRenderer {
     this.ctx.strokeStyle = 'rgba(0, 217, 255, 0.1)'
     this.ctx.lineWidth = 1
 
-    // 수평선
+    // 수평선 전체를 단일 path로 배칭
+    this.ctx.beginPath()
     for (let i = -gridSize; i < GAME_CONFIG.canvas.height + gridSize; i += gridSize) {
-      this.ctx.beginPath()
       this.ctx.moveTo(0, i - offsetY)
       this.ctx.lineTo(GAME_CONFIG.canvas.width, i - offsetY)
-      this.ctx.stroke()
     }
+    this.ctx.stroke()
 
-    // 수직선
+    // 수직선 전체를 단일 path로 배칭
+    this.ctx.beginPath()
     for (let i = -gridSize; i < GAME_CONFIG.canvas.width + gridSize; i += gridSize) {
-      this.ctx.beginPath()
       this.ctx.moveTo(i - offsetX, 0)
       this.ctx.lineTo(i - offsetX, GAME_CONFIG.canvas.height)
-      this.ctx.stroke()
     }
+    this.ctx.stroke()
   }
 
   public renderPlayer(player: Player) {
@@ -329,28 +329,44 @@ export class CanvasRenderer {
     }
   }
 
+  /** @deprecated 개별 호출 대신 renderProjectiles 배치 버전을 사용하세요 */
   public renderProjectile(projectile: Projectile) {
     const { x, y, radius } = projectile
-
     this.ctx.fillStyle = GAME_COLORS.projectile
     this.ctx.beginPath()
     this.ctx.arc(x, y, radius, 0, Math.PI * 2)
     this.ctx.fill()
-
-    this.ctx.strokeStyle = '#FFAA00'
-    this.ctx.lineWidth = 1
-    this.ctx.beginPath()
-    this.ctx.arc(x, y, radius, 0, Math.PI * 2)
-    this.ctx.stroke()
-
-    this.ctx.shadowColor = GAME_COLORS.projectile
-    this.ctx.shadowBlur = 8
   }
 
-  public renderProjectiles(projectiles: Projectile[]) {
-    for (const projectile of projectiles) {
-      this.renderProjectile(projectile)
+  /**
+   * 투사체 배치 렌더링 — beginPath/fill 1회로 전체 투사체를 그림.
+   * shadowBlur 를 쓰지 않아 GPU 블러 패스 오버헤드 제거.
+   */
+  public renderProjectiles(projectiles: Projectile[], isEnemy = false) {
+    if (projectiles.length === 0) return
+    this.ctx.save()
+    this.ctx.shadowBlur = 0  // 누출 방지
+
+    // 내부 원 (fill) — 단일 패스
+    this.ctx.fillStyle = isEnemy ? '#FF4444' : GAME_COLORS.projectile
+    this.ctx.beginPath()
+    for (const p of projectiles) {
+      this.ctx.moveTo(p.x + p.radius, p.y)
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
     }
+    this.ctx.fill()
+
+    // 테두리 (stroke) — 단일 패스
+    this.ctx.strokeStyle = isEnemy ? '#FF8888' : '#FFAA00'
+    this.ctx.lineWidth = 1
+    this.ctx.beginPath()
+    for (const p of projectiles) {
+      this.ctx.moveTo(p.x + p.radius, p.y)
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+    }
+    this.ctx.stroke()
+
+    this.ctx.restore()
   }
 
   public renderAimCursor(x: number, y: number, active: boolean) {

@@ -34,7 +34,7 @@ const INITIAL_PLAYER: Player = {
   rotation: 0,
   dashTimeRemaining: 0,
   dashVelocity: { x: 0, y: 0 },
-  dashCooldownMs: 1500,
+  dashCooldownMs: 1000,
   dashDuration: 0.18,
   dashSpeed: 900,
   projectileCount: 1, // default single shot

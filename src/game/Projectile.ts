@@ -22,7 +22,7 @@ export class ProjectileSystem {
       radius: 5,
       damage,
       lifetime: 0,
-      maxLifetime: 10,
+      maxLifetime: 5,
     }
 
     this.projectiles.push(projectile)

@@ -1,11 +1,16 @@
 import { Projectile } from '../types'
 
 const GLOBAL_PROJECTILE_SPEED_SCALE = 0.7
+const MAX_ENEMY_PROJECTILES = 250  // 성능: 보스 패턴 3 등 스파이크 방지
 
 export class EnemyProjectileSystem {
   private projectiles: Projectile[] = []
 
   createProjectile(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number): Projectile {
+    // 최대 수 초과 시 가장 오래된 투사체 제거
+    if (this.projectiles.length >= MAX_ENEMY_PROJECTILES) {
+      this.projectiles.splice(0, 20)
+    }
     const actualSpeed = speed * GLOBAL_PROJECTILE_SPEED_SCALE
     const dx = targetX - x
     const dy = targetY - y
@@ -21,7 +26,7 @@ export class EnemyProjectileSystem {
       radius: 6,
       damage,
       lifetime: 0,
-      maxLifetime: 10,
+      maxLifetime: 5,
     }
 
     this.projectiles.push(projectile)

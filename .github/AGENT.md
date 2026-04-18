@@ -1,4 +1,4 @@
-# AGENT.md — NEXUS Roguelike Survival
+# AGENT.md — Ruin's City
 
 > AI 에이전트 전용 레포지토리 가이드. 코드 수정 전 이 파일을 먼저 읽으세요.
 > 마지막 업데이트: 2026-04-18
@@ -7,7 +7,7 @@
 
 ## 프로젝트 한줄 요약
 
-**NEXUS Roguelike Survival** — 탑다운 캔버스 기반 아레나 생존 게임.  
+**Ruin's City** — 탑다운 캔버스 기반 아레나 생존 게임.  
 React는 UI 전용, 실제 게임 로직은 imperative GameLoop 클래스가 담당합니다.
 
 **기술 스택:** React 18 + TypeScript + Vite + Zustand + Tailwind CSS + HTML5 Canvas
