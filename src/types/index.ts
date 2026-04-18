@@ -14,6 +14,7 @@ export interface Player extends Vector2 {
   attackPower: number
   attackSpeed: number
   moveSpeed: number
+  projectileSpeed?: number
   rotation: number
   // Dash state (optional)
   dashTimeRemaining?: number
@@ -65,7 +66,7 @@ export interface Upgrade {
   id: string
   name: string
   description: string
-  type: 'damage' | 'speed' | 'attackSpeed' | 'health' | 'weapon'
+  type: 'damage' | 'speed' | 'attackSpeed' | 'health' | 'weapon' | 'projectileSpeed'
   value: number
 }
 

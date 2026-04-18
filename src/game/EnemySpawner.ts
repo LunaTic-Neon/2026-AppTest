@@ -2,7 +2,7 @@ import { Enemy } from '../types'
 import { GAME_CONFIG } from '../config/gameConfig'
 
 // 중간보스 도약 속도 (GameLoop에서 참조)
-export const MINI_BOSS_LEAP_SPEED = 900
+export const MINI_BOSS_LEAP_SPEED = 720
 
 export class EnemySpawner {
   private spawnRate: number = 1.2           // 초기 스폰률
@@ -110,13 +110,13 @@ export class EnemySpawner {
         return {
           hp: base.basicHp * 0.7 * difficultyMultiplier,
           attackPower: base.basicAttackPower * 0.8 * difficultyMultiplier,
-          moveSpeed: base.basicMoveSpeed * 1.6,
+          moveSpeed: base.basicMoveSpeed * 1.7,
         }
       case 'tank':
         return {
           hp: base.basicHp * 1.8 * difficultyMultiplier,
           attackPower: base.basicAttackPower * 1.2 * difficultyMultiplier,
-          moveSpeed: base.basicMoveSpeed * 0.75,
+          moveSpeed: base.basicMoveSpeed * 0.675,
         }
       default:
         return {
@@ -169,7 +169,7 @@ export class EnemySpawner {
       shootTimer: 0,
       attackCooldown: 1.8,
       attackTimer: 0,
-      projectileSpeed: 380,
+      projectileSpeed: 336,
       attackRange: 800,
     }
 

@@ -45,15 +45,16 @@ export class AutoAttack {
   private fireProjectile(player: Player, target: Enemy): void {
     const count = Math.min(player.projectileCount || 1, 5)
     const baseAngle = Math.atan2(target.y - player.y, target.x - player.x)
-    const spread = 0.25 // radians total spread
+    const spread = count === 2 ? 0.15 : 0.25 // narrower spread for the first two-shot upgrade
+    const speed = player.projectileSpeed || 600
 
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1)
       const angle = baseAngle + (t - 0.5) * spread
       const tx = player.x + Math.cos(angle) * 10
       const ty = player.y + Math.sin(angle) * 10
-      const vx = Math.cos(angle) * 600
-      const vy = Math.sin(angle) * 600
+      const vx = Math.cos(angle) * speed
+      const vy = Math.sin(angle) * speed
 
       this.projectileSystem.createProjectile(
         tx,
@@ -61,7 +62,7 @@ export class AutoAttack {
         tx + vx,
         ty + vy,
         player.attackPower,
-        600
+        speed
       )
     }
   }
@@ -69,15 +70,16 @@ export class AutoAttack {
   private fireProjectileToMouse(player: Player, mouseX: number, mouseY: number): void {
     const count = Math.min(player.projectileCount || 1, 5)
     const baseAngle = Math.atan2(mouseY - player.y, mouseX - player.x)
-    const spread = 0.25
+    const spread = count === 2 ? 0.15 : 0.25
+    const speed = player.projectileSpeed || 600
 
     for (let i = 0; i < count; i++) {
       const t = count === 1 ? 0.5 : i / (count - 1)
       const angle = baseAngle + (t - 0.5) * spread
       const tx = player.x + Math.cos(angle) * 10
       const ty = player.y + Math.sin(angle) * 10
-      const vx = Math.cos(angle) * 600
-      const vy = Math.sin(angle) * 600
+      const vx = Math.cos(angle) * speed
+      const vy = Math.sin(angle) * speed
 
       this.projectileSystem.createProjectile(
         tx,
@@ -85,7 +87,7 @@ export class AutoAttack {
         tx + vx,
         ty + vy,
         player.attackPower,
-        600
+        speed
       )
     }
   }

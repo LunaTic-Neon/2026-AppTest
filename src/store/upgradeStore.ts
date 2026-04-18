@@ -38,10 +38,17 @@ const DEFAULT_UPGRADES: Upgrade[] = [
   },
   {
     id: 'health_1',
-    name: '체력 회복',
-    description: '최대 체력의 25%를 회복합니다',
+    name: '최대 체력 증가',
+    description: '최대 체력이 20% 증가하고 해당량만큼 회복합니다',
     type: 'health',
-    value: 0.25,
+    value: 0.2,
+  },
+  {
+    id: 'projectileSpeed_1',
+    name: '탄막 속도 증가',
+    description: '플레이어 탄막 속도가 15% 증가합니다',
+    type: 'projectileSpeed',
+    value: 1.15,
   },
   {
     id: 'weapon_multishot',

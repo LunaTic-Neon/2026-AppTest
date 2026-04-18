@@ -81,7 +81,7 @@ function App() {
   const isPlaying = gameStore.currentScene === 'playing'
 
   return (
-    <div className="w-full h-screen bg-primary overflow-hidden relative">
+    <div className="w-full h-screen bg-primary overflow-hidden relative flex items-center justify-center">
       {isPlaying && (
         <button
           className="absolute top-4 left-4 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full bg-black/80 text-xl text-white shadow-lg border border-white/20 hover:bg-black"
@@ -94,8 +94,8 @@ function App() {
 
       <canvas
         ref={canvasRef}
-        className="block w-full h-full"
-        style={{ display: 'block', margin: 0, padding: 0 }}
+        className="block max-w-full max-h-full aspect-[16/9]"
+        style={{ display: 'block', width: '100%', height: 'auto', margin: 0, padding: 0 }}
       />
 
       {/* ── 메인 메뉴 ───────────────────────────────────────── */}

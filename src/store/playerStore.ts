@@ -30,6 +30,7 @@ const INITIAL_PLAYER: Player = {
   attackPower: GAME_CONFIG.player.initialAttackPower,
   attackSpeed: GAME_CONFIG.player.initialAttackSpeed,
   moveSpeed: GAME_CONFIG.player.initialMoveSpeed,
+  projectileSpeed: 600,
   rotation: 0,
   dashTimeRemaining: 0,
   dashVelocity: { x: 0, y: 0 },

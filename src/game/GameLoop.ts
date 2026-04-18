@@ -292,7 +292,7 @@ export class GameLoop {
       else if (isBossEnemy) {
         const LEAP_DURATION = 0.55
         const LEAP_REST = 0.45
-        const LEAP_SPEED = MINI_BOSS_LEAP_SPEED   // 900 (감소된 값)
+        const LEAP_SPEED = MINI_BOSS_LEAP_SPEED
         const MID_SHOT_T = 0.25
         const END_SHOT_T = 0.50
 
@@ -342,7 +342,7 @@ export class GameLoop {
                 enemy.x + Math.cos(angle) * 100,
                 enemy.y + Math.sin(angle) * 100,
                 enemy.attackPower,
-                (enemy as any).projectileSpeed || 420
+                (enemy as any).projectileSpeed || 336
               )
             }
             ;(enemy as any).shotsFired = 1
@@ -357,7 +357,7 @@ export class GameLoop {
                 enemy.x + Math.cos(angle) * 100,
                 enemy.y + Math.sin(angle) * 100,
                 enemy.attackPower,
-                (enemy as any).projectileSpeed || 380
+                (enemy as any).projectileSpeed || 304
               )
             }
             ;(enemy as any).shotsFired = 2

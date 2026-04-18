@@ -1,15 +1,18 @@
 import { Projectile } from '../types'
 
+const GLOBAL_PROJECTILE_SPEED_SCALE = 0.7
+
 export class EnemyProjectileSystem {
   private projectiles: Projectile[] = []
 
   createProjectile(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number): Projectile {
+    const actualSpeed = speed * GLOBAL_PROJECTILE_SPEED_SCALE
     const dx = targetX - x
     const dy = targetY - y
     const distance = Math.hypot(dx, dy) || 1
 
-    const vx = (dx / distance) * speed
-    const vy = (dy / distance) * speed
+    const vx = (dx / distance) * actualSpeed
+    const vy = (dy / distance) * actualSpeed
 
     const projectile: Projectile = {
       x,

@@ -48,6 +48,11 @@ export default function LevelUpScreen() {
           hp: Math.min(player.hp + healAmount, player.maxHp + healAmount),
         })
         break
+      case 'projectileSpeed':
+        playerStore.updateStats({
+          projectileSpeed: (player.projectileSpeed || 600) * upgrade.value,
+        })
+        break
       case 'weapon':
         // increase projectileCount by 1, capped at 5
         const currentCount = player.projectileCount || 1

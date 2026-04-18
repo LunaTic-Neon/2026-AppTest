@@ -1,5 +1,5 @@
 import { JoystickState, Vector2 } from '../../types'
-import { JOYSTICK_CONFIG } from '../../config/gameConfig'
+import { JOYSTICK_CONFIG, GAME_CONFIG } from '../../config/gameConfig'
 
 export class JoystickInput {
   private touchId: number | null = null
@@ -15,8 +15,8 @@ export class JoystickInput {
   private canvasHeight: number
 
   constructor(canvas: HTMLCanvasElement) {
-    this.canvasWidth = canvas.width
-    this.canvasHeight = canvas.height
+    this.canvasWidth = GAME_CONFIG.canvas.width
+    this.canvasHeight = GAME_CONFIG.canvas.height
     this.setupEventListeners(canvas)
   }
 
@@ -33,8 +33,8 @@ export class JoystickInput {
 
     const touch = e.touches[0]
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-    const x = touch.clientX - rect.left
-    const y = touch.clientY - rect.top
+    const x = ((touch.clientX - rect.left) / rect.width) * this.canvasWidth
+    const y = ((touch.clientY - rect.top) / rect.height) * this.canvasHeight
 
     const joystickCenterX = this.canvasWidth - JOYSTICK_CONFIG.offsetX
     const joystickCenterY = this.canvasHeight - JOYSTICK_CONFIG.offsetY
@@ -62,8 +62,8 @@ export class JoystickInput {
       if (touch.identifier === this.touchId) {
         const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
         this.currentPos = {
-          x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top,
+          x: ((touch.clientX - rect.left) / rect.width) * this.canvasWidth,
+          y: ((touch.clientY - rect.top) / rect.height) * this.canvasHeight,
         }
         activeTouchFound = true
         break

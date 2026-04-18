@@ -241,10 +241,6 @@ export class CanvasRenderer {
           this.ctx.stroke()
 
           // 중간보스 레이블
-          this.ctx.font = 'bold 14px Arial'
-          this.ctx.fillStyle = '#FFD700'
-          this.ctx.textAlign = 'center'
-          this.ctx.fillText('중간보스', x, y - size - 8)
         } else {
           const size = radius * 2
           this.ctx.fillStyle = '#8B0000'
@@ -522,6 +518,7 @@ export class CanvasRenderer {
     const dpr = window.devicePixelRatio || 1
     this.canvas.width = GAME_CONFIG.canvas.width * dpr
     this.canvas.height = GAME_CONFIG.canvas.height * dpr
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0)
     this.ctx.scale(dpr, dpr)
   }
 
