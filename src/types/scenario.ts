@@ -15,6 +15,7 @@ export interface EmotionDelta {
 export interface ScenarioEffects {
   flags?: Record<string, boolean>
   emotion?: EmotionDelta
+  syncPercent?: number
 }
 
 export interface ScenarioChoice {

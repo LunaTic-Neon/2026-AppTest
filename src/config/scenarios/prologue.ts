@@ -121,7 +121,7 @@ export const PROLOGUE_SCENARIO: Scenario = {
       nextNodeId: 'beat4_shelter',
     },
 
-    // Beat 4: 은신처 — 선택지
+    // Beat 4: 은신처
     beat4_shelter: {
       id: 'beat4_shelter',
       type: 'dialogue',
@@ -133,53 +133,15 @@ export const PROLOGUE_SCENARIO: Scenario = {
       id: 'beat4_ren_teach',
       type: 'dialogue',
       speakerId: 'ren',
-      text: '여기서 살아남는 법은 간단해.\n빠른 판단으로 거침없이 행동하면 돼.\n너—— 혼자 버텨왔나?',
-      nextNodeId: 'beat4_choice',
+      text: '여기서 살아남는 법은 간단해.\n빠른 판단으로 거침없이 행동하면 돼.\n……혼자 버텨왔겠지. 기억은 없어도, 몸이 그렇게 말하고 있어.',
+      nextNodeId: 'beat4_ella_reply',
+      effects: { emotion: { sadness: 5 } },
     },
-    beat4_choice: {
-      id: 'beat4_choice',
-      type: 'choice',
-      text: '렌의 질문에 어떻게 답할까?',
-      choices: [
-        {
-          id: 'alone_nod',
-          text: '기억 안나.',
-          nextNodeId: 'beat4_alone',
-          effects: { emotion: { sadness: 8 } },
-        },
-        {
-          id: 'alone_dismiss',
-          text: '그런 건 중요하지 않아.',
-          nextNodeId: 'beat4_dismiss',
-          effects: { emotion: { anger: 5 } },
-        },
-        {
-          id: 'alone_ask',
-          text: '……넌 왜 도와줬어?',
-          nextNodeId: 'beat4_ask',
-          effects: { emotion: { joy: 3 } },
-        },
-      ],
-    },
-    beat4_alone: {
-      id: 'beat4_alone',
+    beat4_ella_reply: {
+      id: 'beat4_ella_reply',
       type: 'dialogue',
-      speakerId: 'ren',
-      text: '그래. 대부분 그래.\n하지만 혼자만으론 오래 못 간다. 기억해 둬.',
-      nextNodeId: 'beat4_ren_gear',
-    },
-    beat4_dismiss: {
-      id: 'beat4_dismiss',
-      type: 'dialogue',
-      speakerId: 'ren',
-      text: '……말하기 싫으면 말하지 마.\n대신 내 말은 들어. 감정은 전투에 쓸데없어.',
-      nextNodeId: 'beat4_ren_gear',
-    },
-    beat4_ask: {
-      id: 'beat4_ask',
-      type: 'dialogue',
-      speakerId: 'ren',
-      text: '……이유? 살아남은 사람을 그냥 두진 않아.\n너, 이상하게—— 움직이는 방식이 달라.',
+      speakerId: 'ella',
+      text: '……모르겠어. 그래도 지금까지는, 혼자였어.',
       nextNodeId: 'beat4_ren_gear',
     },
     beat4_ren_gear: {
@@ -195,28 +157,28 @@ export const PROLOGUE_SCENARIO: Scenario = {
       id: 'beat5_hook',
       type: 'dialogue',
       speakerId: 'ren',
-      text: '내일 아침, 생필품을 구하러 나가야 해.\n너도 같이 가자. 움직이는 법은 그때 알려 줄 테니까.',
+      text: '내일부터는 움직이는 법부터 가르칠 거야.\n아스포델에서 살아남으려면, 몸부터 배워야 하거든.',
       nextNodeId: 'beat5_ella',
     },
     beat5_ella: {
       id: 'beat5_ella',
       type: 'dialogue',
       speakerId: 'ella',
-      text: '……알겠어.\n생각은 살아남고 나서 하지 뭐.',
+      text: '……알겠어.\n일단은, 네 말대로 할게.',
       nextNodeId: 'beat5_narrator',
     },
     beat5_narrator: {
       id: 'beat5_narrator',
       type: 'dialogue',
       speakerId: 'narrator',
-      text: '폐허의 밤은 길었다.\n엘라는 모르고 있었다—— 내일의 만남이 끼칠 영향을.',
+      text: '폐허의 밤은 길었다.\n엘라는 아직 몰랐다—— 곧 배우게 될 생존의 방식들을.',
       nextNodeId: 'prologue_end',
     },
     prologue_end: {
       id: 'prologue_end',
       type: 'end',
       effects: {
-        flags: { tutorial_complete: true, met_mentor: true },
+        flags: { met_mentor: true },
       },
     },
   },

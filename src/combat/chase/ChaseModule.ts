@@ -1,6 +1,6 @@
 import { CombatContext, CombatModule, CombatResult } from '../types'
 
-/** 1장 — 도주/추격 (카나데 구출) */
+/** 1장 — 도주/추격 (유메 구출) */
 export const chaseModule: CombatModule = {
   id: 'chase',
   name: '도주/추격',

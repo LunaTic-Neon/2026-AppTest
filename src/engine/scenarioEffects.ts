@@ -15,6 +15,10 @@ export function applyScenarioEffects(effects?: ScenarioEffects, choiceKey?: stri
     useEmotionStore.getState().applyDelta(effects.emotion)
   }
 
+  if (effects.syncPercent != null) {
+    useEmotionStore.getState().setSyncPercent(effects.syncPercent)
+  }
+
   if (choiceKey && choiceId) {
     useStoryStore.getState().recordChoice(choiceKey, choiceId)
   }

@@ -1,4 +1,4 @@
-import { CHAPTER_LIST } from '../config/scenarios'
+import { CHAPTER_LIST, isChapterPlayable, isChapterUnlocked } from '../config/scenarios'
 import { ChapterId } from '../types/scenario'
 import { useStoryStore } from '../store/storyStore'
 
@@ -12,7 +12,7 @@ export default function ChapterSelectScreen({ onSelect, onBack }: Props) {
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center mb-8">
           <button
             className="mr-4 text-slate-400 hover:text-white transition text-2xl"
@@ -26,7 +26,9 @@ export default function ChapterSelectScreen({ onSelect, onBack }: Props) {
         <div className="space-y-3">
           {CHAPTER_LIST.map((ch) => {
             const cleared = completedScenes.includes(ch.id)
-            const locked = !ch.available
+            const unlocked = isChapterUnlocked(ch.id, completedScenes)
+            const playable = isChapterPlayable(ch.id)
+            const locked = !unlocked || !playable
 
             return (
               <button
@@ -47,7 +49,11 @@ export default function ChapterSelectScreen({ onSelect, onBack }: Props) {
                     <div className="text-sm text-slate-400">{ch.subtitle}</div>
                   </div>
                   {cleared && <span className="text-emerald-400 text-xl font-bold">✓</span>}
-                  {locked && <span className="text-slate-500 text-sm">준비 중</span>}
+                  {locked && (
+                    <span className="text-slate-500 text-sm">
+                      {!unlocked ? '잠김' : '준비 중'}
+                    </span>
+                  )}
                 </div>
               </button>
             )

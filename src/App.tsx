@@ -5,7 +5,7 @@ import ChapterSelectScreen from './components/ChapterSelectScreen'
 import ScenarioPlayer from './components/ScenarioPlayer'
 import ToBeContinuedScreen from './components/ToBeContinuedScreen'
 import SettingsPanel from './components/SettingsPanel'
-import { getScenario } from './config/scenarios'
+import { getScenario, getNextChapterHint, isChapterPlayable, isChapterUnlocked, CHAPTER_LIST } from './config/scenarios'
 import { ChapterId } from './types/scenario'
 import { useMetaProgressionStore } from './store/metaProgressionStore'
 import { useStoryStore } from './store/storyStore'
@@ -78,6 +78,24 @@ function App() {
     setScreen('continued')
   }
 
+  const handleContinueToNext = () => {
+    if (!activeChapter) return
+    const idx = CHAPTER_LIST.findIndex((c) => c.id === activeChapter)
+    const next = CHAPTER_LIST[idx + 1]
+    if (!next || !isChapterPlayable(next.id)) {
+      handleReturnToTitle()
+      return
+    }
+    const completed = useStoryStore.getState().completedScenes
+    if (!isChapterUnlocked(next.id, completed)) {
+      handleReturnToTitle()
+      return
+    }
+    setActiveChapter(next.id)
+    setResumeNodeId(undefined)
+    setScreen('scenario')
+  }
+
   const handleReturnToTitle = () => {
     setActiveChapter(null)
     setResumeNodeId(undefined)
@@ -122,8 +140,18 @@ function App() {
 
       {screen === 'continued' && activeChapter && (
         <ToBeContinuedScreen
+          chapterId={activeChapter}
           chapterTitle={activeScenario?.subtitle ?? activeChapter}
           onReturnToTitle={handleReturnToTitle}
+          onContinue={
+            getNextChapterHint(activeChapter) && (() => {
+              const idx = CHAPTER_LIST.findIndex((c) => c.id === activeChapter)
+              const next = CHAPTER_LIST[idx + 1]
+              return next && isChapterPlayable(next.id)
+            })()
+              ? handleContinueToNext
+              : undefined
+          }
         />
       )}
 
