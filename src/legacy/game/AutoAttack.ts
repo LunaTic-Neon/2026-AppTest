@@ -1,4 +1,4 @@
-import { Player, Enemy, Projectile } from '../types'
+import { Player, Enemy, Projectile } from '../../types'
 import { CollisionDetection } from './CollisionDetection'
 import { ProjectileSystem } from './Projectile'
 

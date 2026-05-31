@@ -1,5 +1,5 @@
-import { JoystickState, Vector2 } from '../../types'
-import { JOYSTICK_CONFIG, GAME_CONFIG } from '../../config/gameConfig'
+import { JoystickState, Vector2 } from '../../../types'
+import { JOYSTICK_CONFIG, GAME_CONFIG } from '../../../config/gameConfig'
 
 export class JoystickInput {
   private touchId: number | null = null

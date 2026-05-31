@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 
+interface StoryHydrate {
+  completedScenes?: string[]
+  playerChoices?: Record<string, string>
+  storyFlags?: Record<string, boolean>
+}
+
 interface StoryState {
   currentSceneId: string
   currentDialogueIndex: number
@@ -14,6 +20,7 @@ interface StoryState {
   recordChoice: (sceneId: string, choiceId: string) => void
   setStoryFlag: (flagName: string, value: boolean) => void
   resetStory: () => void
+  hydrate: (data: StoryHydrate) => void
 }
 
 const INITIAL_STATE = {
@@ -60,4 +67,11 @@ export const useStoryStore = create<StoryState>((set) => ({
     })),
 
   resetStory: () => set(INITIAL_STATE),
+
+  hydrate: (data) =>
+    set((state) => ({
+      completedScenes: data.completedScenes ?? state.completedScenes,
+      playerChoices: data.playerChoices ?? state.playerChoices,
+      storyFlags: data.storyFlags ?? state.storyFlags,
+    })),
 }))

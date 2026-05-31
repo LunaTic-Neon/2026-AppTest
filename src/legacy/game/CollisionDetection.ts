@@ -1,4 +1,4 @@
-import { Player, Enemy, Projectile, Vector2 } from '../types'
+import { Player, Enemy, Projectile, Vector2 } from '../../types'
 
 export class CollisionDetection {
   static checkCircleCollision(a: Vector2, radiusA: number, b: Vector2, radiusB: number): boolean {

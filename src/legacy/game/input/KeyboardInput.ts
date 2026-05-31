@@ -1,4 +1,4 @@
-import { Vector2 } from '../../types'
+import { Vector2 } from '../../../types'
 
 export class KeyboardInput {
   private keys: Map<string, boolean> = new Map()

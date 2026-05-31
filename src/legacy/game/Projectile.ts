@@ -1,4 +1,4 @@
-import { Projectile } from '../types'
+import { Projectile } from '../../types'
 
 const GLOBAL_PROJECTILE_SPEED_SCALE = 0.7
 

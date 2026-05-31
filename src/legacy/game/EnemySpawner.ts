@@ -1,5 +1,5 @@
-import { Enemy } from '../types'
-import { GAME_CONFIG } from '../config/gameConfig'
+import { Enemy } from '../../types'
+import { GAME_CONFIG } from '../../config/gameConfig'
 
 // 중간보스 도약 속도 (GameLoop에서 참조)
 export const MINI_BOSS_LEAP_SPEED = 576

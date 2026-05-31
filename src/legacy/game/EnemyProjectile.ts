@@ -1,4 +1,4 @@
-import { Projectile } from '../types'
+import { Projectile } from '../../types'
 
 const GLOBAL_PROJECTILE_SPEED_SCALE = 0.7
 const MAX_ENEMY_PROJECTILES = 250  // 성능: 보스 패턴 3 등 스파이크 방지
